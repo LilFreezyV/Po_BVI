@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-paper text-ink-900 font-sans antialiased;
+    font-feature-settings: 'ss01' on, 'cv11' on;
+  }
+  ::selection {
+    @apply bg-brand-100 text-brand-800;
+  }
+  h1, h2, h3 {
+    @apply tracking-[-0.02em];
+  }
+}
+
+@layer components {
+  .container-x {
+    @apply mx-auto w-full max-w-content px-5 sm:px-8;
+  }
+  .card {
+    @apply rounded-2xl border border-line bg-white shadow-card;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-[15px] font-semibold transition
+           focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2;
+  }
+  .btn-primary {
+    @apply btn bg-brand-700 text-white hover:bg-brand-800 active:bg-brand-900;
+  }
+  .btn-secondary {
+    @apply btn border border-line bg-white text-ink-900 hover:border-ink-300 hover:bg-white;
+  }
+  .btn-ghost {
+    @apply btn text-ink-700 hover:bg-brand-50;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold;
+  }
+  .eyebrow {
+    @apply text-xs font-bold uppercase tracking-[0.14em] text-brand-500;
+  }
+  .prose-note p {
+    @apply mb-3 leading-relaxed text-ink-700;
+  }
+  .prose-note p:last-child {
+    @apply mb-0;
+  }
+}
+
+/* Тонкая «миллиметровка» для геройского блока — вместо кричащего градиента */
+.grid-paper {
+  background-image:
+    linear-gradient(to right, rgba(15, 19, 23, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 19, 23, 0.045) 1px, transparent 1px);
+  background-size: 28px 28px;
+  -webkit-mask-image: radial-gradient(120% 80% at 50% 0%, #000 20%, transparent 78%);
+  mask-image: radial-gradient(120% 80% at 50% 0%, #000 20%, transparent 78%);
+}
