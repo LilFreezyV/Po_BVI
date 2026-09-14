@@ -6,6 +6,7 @@ import Catalog from './pages/Catalog.jsx'
 import TopicPage from './pages/TopicPage.jsx'
 import ProgressPage from './pages/Progress.jsx'
 import Base from './pages/Base.jsx'
+import Login from './pages/Login.jsx'
 
 function readHash() {
   const raw = window.location.hash.replace(/^#/, '') || '/'
@@ -42,6 +43,8 @@ export default function App() {
     page = <ProgressPage />
   } else if (path === '/base') {
     page = <Base />
+  } else if (path === '/login') {
+    page = <Login />
   } else {
     page = <Landing />
   }

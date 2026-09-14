@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
-import { OLYMPIADS, UNIVERSITIES } from '../data/site.js'
+import { listOlympiads, listUniversities } from '../lib/api.js'
+import { useAsync } from '../lib/useAsync.js'
+import { SUBJECT_LABELS } from '../lib/subjects.js'
 import { Chip, Icon, navigate } from '../components/ui.jsx'
 
 const TABS = [
@@ -23,7 +25,7 @@ function OlympiadCard({ o }) {
       <dl className="mt-5 grid gap-4 sm:grid-cols-2">
         <div>
           <dt className="text-[12px] font-bold uppercase tracking-[0.1em] text-ink-400">Предметы</dt>
-          <dd className="mt-1 text-[15px]">{o.subjects.join(', ')}</dd>
+          <dd className="mt-1 text-[15px]">{o.subjects.map((s) => SUBJECT_LABELS[s] || s).join(', ')}</dd>
         </div>
         <div>
           <dt className="text-[12px] font-bold uppercase tracking-[0.1em] text-ink-400">Классы</dt>
@@ -64,8 +66,8 @@ function UniversityCard({ u }) {
         <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-ink-400">Даёт БВИ по олимпиадам</p>
         <div className="mt-2 flex flex-wrap gap-2">
           {u.accepts.map((a) => (
-            <Chip key={a} className="border border-line bg-paper text-ink-700">
-              {a}
+            <Chip key={a.id} className="border border-line bg-paper text-ink-700">
+              {a.title}
             </Chip>
           ))}
         </div>
@@ -87,6 +89,14 @@ function UniversityCard({ u }) {
 
 export default function Base() {
   const [tab, setTab] = useState('olympiads')
+  const { data: olympiads, loading: olympiadsLoading, error: olympiadsError } = useAsync(listOlympiads, [])
+  const { data: universities, loading: universitiesLoading, error: universitiesError } = useAsync(
+    listUniversities,
+    []
+  )
+
+  const loading = olympiadsLoading || universitiesLoading
+  const error = olympiadsError || universitiesError
 
   return (
     <div className="container-x py-10 lg:py-14">
@@ -115,11 +125,20 @@ export default function Base() {
         ))}
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        {tab === 'olympiads'
-          ? OLYMPIADS.map((o) => <OlympiadCard key={o.id} o={o} />)
-          : UNIVERSITIES.map((u) => <UniversityCard key={u.id} u={u} />)}
-      </div>
+      {loading && <p className="py-16 text-center text-ink-400">Загружаем базу…</p>}
+      {error && !loading && (
+        <p className="py-16 text-center text-ink-400">
+          Не удалось загрузить данные. Проверьте, что бэкенд запущен.
+        </p>
+      )}
+
+      {!loading && !error && (
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          {tab === 'olympiads'
+            ? olympiads.map((o) => <OlympiadCard key={o.id} o={o} />)
+            : universities.map((u) => <UniversityCard key={u.id} u={u} />)}
+        </div>
+      )}
 
       <div className="card mt-8 flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
         <div>

@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from 'react'
-import { LEVELS, TOPICS, getSection, getTopic } from '../data/topics.js'
-import { AI_SUGGESTIONS, OLYMPIADS, PROGRESS, STATUS_META } from '../data/site.js'
+import React, { useState } from 'react'
+import { LEVELS } from '../data/topics.js'
+import { AI_SUGGESTIONS, STATUS_META } from '../data/site.js'
+import { getTopic as fetchTopic } from '../lib/api.js'
+import { useAsync } from '../lib/useAsync.js'
+import { useAuth } from '../lib/auth.jsx'
 import { Chip, Icon, Link, ProgressBar, navigate } from '../components/ui.jsx'
-
-const olympiad = (id) => OLYMPIADS.find((o) => o.id === id)
 
 function TaskCard({ task, index }) {
   const [open, setOpen] = useState(false)
@@ -27,8 +28,7 @@ function TaskCard({ task, index }) {
           </div>
           {open && (
             <div className="mt-3 rounded-lg bg-paper p-4 text-[14px] leading-relaxed text-ink-500">
-              Начните с рисунка и выпишите, что сохраняется. В прототипе здесь появляется полный разбор с шагами
-              решения и типичными ошибками, а ниже — кнопка «проверить своё решение через ИИ-помощника».
+              {task.hint || 'Подсказка появится в следующих обновлениях.'}
             </div>
           )}
         </div>
@@ -134,16 +134,14 @@ function Assistant({ topic }) {
 }
 
 export default function TopicPage({ topicId }) {
-  const topic = getTopic(topicId)
-  const [pro, setPro] = useState(true)
+  const { token } = useAuth()
+  const { data: topic, loading, error } = useAsync(() => fetchTopic(topicId, token), [topicId, token])
 
-  const neighbours = useMemo(() => {
-    if (!topic) return { prev: null, next: null }
-    const i = TOPICS.findIndex((t) => t.id === topic.id)
-    return { prev: TOPICS[i - 1] || null, next: TOPICS[i + 1] || null }
-  }, [topic])
+  if (loading) {
+    return <div className="container-x py-24 text-center text-ink-400">Загружаем тему…</div>
+  }
 
-  if (!topic) {
+  if (error?.status === 404 || (!loading && !topic)) {
     return (
       <div className="container-x py-24 text-center">
         <p className="text-[18px] font-bold">Тема не найдена</p>
@@ -154,11 +152,16 @@ export default function TopicPage({ topicId }) {
     )
   }
 
-  const section = getSection(topic.sectionId)
-  const subjectTitle = section.subject === 'physics' ? 'Физика' : 'Математика'
-  const progress = PROGRESS[topic.id] || { status: 'new', percent: 0, solved: 0, total: 6 }
-  const meta = STATUS_META[progress.status]
-  const locked = !topic.free && !pro
+  if (error) {
+    return (
+      <div className="container-x py-24 text-center">
+        <p className="text-[18px] font-bold">Не удалось загрузить тему</p>
+        <p className="mt-2 text-ink-400">Проверьте, что бэкенд запущен, и обновите страницу.</p>
+      </div>
+    )
+  }
+
+  const meta = STATUS_META[topic.progress.status]
 
   return (
     <div className="container-x py-8 lg:py-12">
@@ -167,9 +170,9 @@ export default function TopicPage({ topicId }) {
           Каталог
         </Link>
         <Icon name="chevron" className="h-3.5 w-3.5" />
-        <span>{subjectTitle}</span>
+        <span>{topic.subject === 'physics' ? 'Физика' : 'Математика'}</span>
         <Icon name="chevron" className="h-3.5 w-3.5" />
-        <span className="text-ink-700">{section.title}</span>
+        <span className="text-ink-700">{topic.section_title}</span>
       </nav>
 
       <div className="mt-5 grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-12">
@@ -223,7 +226,7 @@ export default function TopicPage({ topicId }) {
                 </p>
               </div>
               <span className="text-[14px] text-ink-400">
-                Решено {progress.solved} из {progress.total}
+                Решено {topic.progress.solved} из {topic.progress.total}
               </span>
             </div>
 
@@ -233,7 +236,7 @@ export default function TopicPage({ topicId }) {
                   key={level.id}
                   level={level}
                   tasks={topic.tasks[level.id]}
-                  locked={locked && level.id !== 'easy'}
+                  locked={topic.locked && level.id !== 'easy'}
                 />
               ))}
             </div>
@@ -241,23 +244,23 @@ export default function TopicPage({ topicId }) {
 
           {/* Переходы между темами */}
           <div className="mt-10 flex flex-col gap-3 border-t border-line pt-6 sm:flex-row sm:justify-between">
-            {neighbours.prev ? (
+            {topic.prev_topic_id ? (
               <Link
-                to={`/topic/${neighbours.prev.id}`}
+                to={`/topic/${topic.prev_topic_id}`}
                 className="inline-flex items-center gap-2 text-[15px] font-semibold text-ink-500 hover:text-brand-700"
               >
                 <Icon name="chevron" className="h-4 w-4 rotate-180" />
-                {neighbours.prev.title}
+                Предыдущая тема
               </Link>
             ) : (
               <span />
             )}
-            {neighbours.next && (
+            {topic.next_topic_id && (
               <Link
-                to={`/topic/${neighbours.next.id}`}
+                to={`/topic/${topic.next_topic_id}`}
                 className="inline-flex items-center gap-2 text-[15px] font-semibold text-ink-500 hover:text-brand-700"
               >
-                {neighbours.next.title}
+                Следующая тема
                 <Icon name="chevron" className="h-4 w-4" />
               </Link>
             )}
@@ -269,13 +272,13 @@ export default function TopicPage({ topicId }) {
           <div className="card p-5">
             <p className="text-[15px] font-bold">Прогресс по теме</p>
             <div className="mt-4 flex items-baseline justify-between">
-              <span className="text-[30px] font-extrabold leading-none">{progress.percent}%</span>
+              <span className="text-[30px] font-extrabold leading-none">{topic.progress.percent}%</span>
               <span className="text-[13px] text-ink-400">
-                {progress.solved}/{progress.total} задач
+                {topic.progress.solved}/{topic.progress.total} задач
               </span>
             </div>
             <div className="mt-3">
-              <ProgressBar value={progress.percent} className={meta.bar} />
+              <ProgressBar value={topic.progress.percent} className={meta.bar} />
             </div>
             <button className="btn-secondary mt-5 w-full" onClick={() => navigate('/progress')}>
               Открыть кабинет
@@ -285,19 +288,15 @@ export default function TopicPage({ topicId }) {
           <div className="card p-5">
             <p className="text-[15px] font-bold">Где встречается</p>
             <ul className="mt-4 space-y-3">
-              {topic.olympiads.map((id) => {
-                const o = olympiad(id)
-                if (!o) return null
-                return (
-                  <li key={id} className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-[15px] font-semibold">{o.title}</p>
-                      <p className="text-[13px] text-ink-400">{o.organizer}</p>
-                    </div>
-                    <Chip className="shrink-0 bg-paper text-[11px] text-ink-500">{o.level}</Chip>
-                  </li>
-                )
-              })}
+              {topic.olympiads.map((o) => (
+                <li key={o.id} className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[15px] font-semibold">{o.title}</p>
+                    <p className="text-[13px] text-ink-400">{o.organizer}</p>
+                  </div>
+                  <Chip className="shrink-0 bg-paper text-[11px] text-ink-500">{o.level}</Chip>
+                </li>
+              ))}
             </ul>
             <Link
               to="/base"
@@ -309,23 +308,6 @@ export default function TopicPage({ topicId }) {
           </div>
 
           <Assistant topic={topic} />
-
-          <div className="rounded-2xl border border-dashed border-line p-4">
-            <label className="flex cursor-pointer items-start gap-3">
-              <input
-                type="checkbox"
-                checked={pro}
-                onChange={(e) => setPro(e.target.checked)}
-                className="mt-1 h-4 w-4 accent-[#1D473B]"
-              />
-              <span>
-                <span className="block text-[14px] font-semibold">Режим подписчика</span>
-                <span className="mt-1 block text-[13px] leading-relaxed text-ink-400">
-                  Снимите галочку, чтобы увидеть тему глазами бесплатного пользователя.
-                </span>
-              </span>
-            </label>
-          </div>
         </aside>
       </div>
     </div>

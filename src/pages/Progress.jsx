@@ -1,6 +1,16 @@
 import React, { useMemo, useState } from 'react'
-import { SECTIONS, TOPICS, getSection } from '../data/topics.js'
-import { PROGRESS, STATUS_META, USER } from '../data/site.js'
+import {
+  listSections,
+  listTopics,
+  progressContinue,
+  progressOverview,
+  progressSubjects,
+  progressWeakSpots,
+} from '../lib/api.js'
+import { useAsync } from '../lib/useAsync.js'
+import { useAuth } from '../lib/auth.jsx'
+import { STATUS_META } from '../data/site.js'
+import { SUBJECT_LABELS } from '../lib/subjects.js'
 import { Chip, Icon, Link, ProgressBar, navigate } from '../components/ui.jsx'
 
 const FILTERS = [
@@ -10,14 +20,17 @@ const FILTERS = [
   { id: 'done', label: 'Пройдено' },
 ]
 
-const statusOf = (id) => PROGRESS[id]?.status || 'new'
+function initials(name) {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean)
+  const letters = parts.slice(0, 2).map((p) => p[0]?.toUpperCase())
+  return letters.join('') || '?'
+}
 
-function subjectStats(subject) {
-  const ids = SECTIONS.filter((s) => s.subject === subject).map((s) => s.id)
-  const topics = TOPICS.filter((t) => ids.includes(t.sectionId))
-  const percent = Math.round(topics.reduce((acc, t) => acc + (PROGRESS[t.id]?.percent || 0), 0) / topics.length)
-  const done = topics.filter((t) => statusOf(t.id) === 'done').length
-  return { percent, done, total: topics.length }
+function planLabel(user) {
+  if (!user.subscription_active) return 'Бесплатный тариф'
+  if (!user.subscription_expires_at) return 'Подписка активна'
+  const date = new Date(user.subscription_expires_at).toLocaleDateString('ru-RU')
+  return `Подписка активна до ${date}`
 }
 
 function StatCard({ value, label, hint, accent = 'text-ink-900' }) {
@@ -30,9 +43,8 @@ function StatCard({ value, label, hint, accent = 'text-ink-900' }) {
   )
 }
 
-function TopicRow({ topic }) {
-  const p = PROGRESS[topic.id] || { status: 'new', percent: 0, solved: 0, total: 6 }
-  const meta = STATUS_META[p.status]
+function TopicRow({ topic, sectionTitle }) {
+  const meta = STATUS_META[topic.progress.status]
 
   return (
     <Link
@@ -42,14 +54,14 @@ function TopicRow({ topic }) {
       <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${meta.dot}`} />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[15px] font-semibold">{topic.title}</span>
-        <span className="mt-0.5 block text-[13px] text-ink-400">{getSection(topic.sectionId).title}</span>
+        <span className="mt-0.5 block text-[13px] text-ink-400">{sectionTitle}</span>
       </span>
       <span className="flex items-center gap-4 sm:w-64">
         <span className="w-full">
-          <ProgressBar value={p.percent} className={meta.bar} height="h-1.5" />
+          <ProgressBar value={topic.progress.percent} className={meta.bar} height="h-1.5" />
         </span>
         <span className="w-14 shrink-0 text-right text-[13px] tabular-nums text-ink-400">
-          {p.solved}/{p.total}
+          {topic.progress.solved}/{topic.progress.total}
         </span>
       </span>
       <Chip className={`shrink-0 ${meta.chip} hidden sm:inline-flex`}>{meta.title}</Chip>
@@ -57,26 +69,61 @@ function TopicRow({ topic }) {
   )
 }
 
-export default function ProgressPage() {
+function LoginGate() {
+  return (
+    <div className="container-x py-16 lg:py-24">
+      <div className="card mx-auto max-w-md p-8 text-center">
+        <span className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-brand-50 text-brand-700">
+          <Icon name="lock" />
+        </span>
+        <h1 className="mt-4 text-[22px] font-extrabold">Личный кабинет — только для своих</h1>
+        <p className="mt-2 text-[15px] leading-relaxed text-ink-500">
+          Войдите или зарегистрируйтесь, чтобы видеть свой прогресс по темам и рекомендации.
+        </p>
+        <button className="btn-primary mt-6 w-full" onClick={() => navigate('/login')}>
+          Войти или зарегистрироваться
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function CabinetContent({ user }) {
   const [filter, setFilter] = useState('all')
+  const { token } = useAuth()
 
-  const counts = useMemo(() => {
-    const base = { done: 0, progress: 0, new: 0 }
-    TOPICS.forEach((t) => {
-      base[statusOf(t.id)] += 1
-    })
-    return base
-  }, [])
+  const { data, loading, error } = useAsync(
+    () =>
+      Promise.all([
+        listTopics(token),
+        listSections(),
+        progressSubjects(token),
+        progressOverview(token),
+        progressContinue(token),
+        progressWeakSpots(token),
+      ]),
+    [token]
+  )
 
-  const solved = useMemo(() => Object.values(PROGRESS).reduce((acc, p) => acc + p.solved, 0), [])
-  const totalTasks = useMemo(() => Object.values(PROGRESS).reduce((acc, p) => acc + p.total, 0), [])
+  const sectionTitleOf = useMemo(() => {
+    const map = new Map((data?.[1] || []).map((s) => [s.id, s.title]))
+    return (sectionId) => map.get(sectionId) || ''
+  }, [data])
 
-  const physics = subjectStats('physics')
-  const math = subjectStats('math')
+  if (loading) {
+    return <p className="py-24 text-center text-ink-400">Загружаем кабинет…</p>
+  }
+  if (error) {
+    return (
+      <p className="py-24 text-center text-ink-400">Не удалось загрузить данные. Проверьте, что бэкенд запущен.</p>
+    )
+  }
 
-  const visible = TOPICS.filter((t) => filter === 'all' || statusOf(t.id) === filter)
-
-  const recommended = TOPICS.filter((t) => statusOf(t.id) === 'progress').slice(0, 3)
+  const [topics, , subjects, overview, continueList, weakSpots] = data
+  const totalTopics = overview.done + overview.progress + overview.new
+  const visible = topics.filter((t) => filter === 'all' || t.progress.status === filter)
+  const physics = subjects.find((s) => s.subject === 'physics') || { percent: 0, done: 0, total: 0 }
+  const math = subjects.find((s) => s.subject === 'math') || { percent: 0, done: 0, total: 0 }
 
   return (
     <div className="container-x py-10 lg:py-14">
@@ -84,12 +131,13 @@ export default function ProgressPage() {
       <div className="card flex flex-col gap-6 p-6 sm:p-8 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-4">
           <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-brand-700 text-[18px] font-extrabold text-white">
-            АС
+            {initials(user.name)}
           </span>
           <div>
-            <h1 className="text-[24px] font-extrabold leading-tight sm:text-[28px]">{USER.name}</h1>
+            <h1 className="text-[24px] font-extrabold leading-tight sm:text-[28px]">{user.name}</h1>
             <p className="mt-1 text-[15px] text-ink-500">
-              {USER.grade} · цель: <span className="font-semibold text-ink-900">{USER.goal}</span>
+              {user.grade || 'Класс не указан'} · цель:{' '}
+              <span className="font-semibold text-ink-900">{user.goal || 'не указана'}</span>
             </p>
           </div>
         </div>
@@ -97,32 +145,28 @@ export default function ProgressPage() {
         <div className="flex flex-wrap gap-6 lg:gap-10">
           <div>
             <p className="text-[13px] text-ink-400">Целевые олимпиады</p>
-            <p className="mt-1 text-[15px] font-semibold">{USER.target}</p>
-          </div>
-          <div>
-            <p className="text-[13px] text-ink-400">До отборочного этапа</p>
-            <p className="mt-1 text-[15px] font-semibold">{USER.daysLeft} дня</p>
+            <p className="mt-1 text-[15px] font-semibold">{user.target || 'не указаны'}</p>
           </div>
           <div>
             <p className="text-[13px] text-ink-400">Тариф</p>
-            <p className="mt-1 text-[15px] font-semibold">{USER.plan}</p>
+            <p className="mt-1 text-[15px] font-semibold">{planLabel(user)}</p>
           </div>
         </div>
       </div>
 
       {/* Цифры */}
       <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard value={counts.done} label="Тем пройдено" hint={`из ${TOPICS.length} в каталоге`} accent="text-brand-700" />
-        <StatCard value={counts.progress} label="В процессе" hint="есть незакрытые уровни" accent="text-amber-600" />
-        <StatCard value={counts.new} label="Не начато" hint="ждут в плане подготовки" accent="text-ink-400" />
-        <StatCard value={`${solved}/${totalTasks}`} label="Задач решено" hint={`серия ${USER.streak} дней подряд`} />
+        <StatCard value={overview.done} label="Тем пройдено" hint={`из ${totalTopics} в каталоге`} accent="text-brand-700" />
+        <StatCard value={overview.progress} label="В процессе" hint="есть незакрытые уровни" accent="text-amber-600" />
+        <StatCard value={overview.new} label="Не начато" hint="ждут в плане подготовки" accent="text-ink-400" />
+        <StatCard value={`${overview.solved_tasks}/${overview.total_tasks}`} label="Задач решено" />
       </div>
 
       {/* Прогресс по предметам */}
       <div className="mt-5 grid gap-4 md:grid-cols-2">
         {[
-          { title: 'Физика', data: physics, cls: 'bg-brand-500' },
-          { title: 'Математика', data: math, cls: 'bg-clay-400' },
+          { title: SUBJECT_LABELS.physics, data: physics, cls: 'bg-brand-500' },
+          { title: SUBJECT_LABELS.math, data: math, cls: 'bg-clay-400' },
         ].map((s) => (
           <div key={s.title} className="card p-6">
             <div className="flex items-center justify-between">
@@ -161,7 +205,7 @@ export default function ProgressPage() {
 
           <div className="card mt-5 px-2 py-1 sm:px-3">
             {visible.map((topic) => (
-              <TopicRow key={topic.id} topic={topic} />
+              <TopicRow key={topic.id} topic={topic} sectionTitle={sectionTitleOf(topic.section_id)} />
             ))}
             {visible.length === 0 && <p className="py-10 text-center text-ink-400">В этой группе пока пусто.</p>}
           </div>
@@ -174,24 +218,30 @@ export default function ProgressPage() {
               <Icon name="target" className="h-5 w-5 text-clay-500" />
               <p className="text-[15px] font-bold">Продолжить</p>
             </div>
-            <ul className="mt-4 space-y-3">
-              {recommended.map((t) => {
-                const p = PROGRESS[t.id]
-                return (
-                  <li key={t.id}>
-                    <Link to={`/topic/${t.id}`} className="block rounded-xl bg-paper p-4 transition hover:bg-brand-50">
+            {continueList.length === 0 ? (
+              <p className="mt-4 text-[14px] leading-relaxed text-ink-400">
+                Начните любую тему — она появится здесь, пока не будет пройдена целиком.
+              </p>
+            ) : (
+              <ul className="mt-4 space-y-3">
+                {continueList.map((t) => (
+                  <li key={t.topic_id}>
+                    <Link
+                      to={`/topic/${t.topic_id}`}
+                      className="block rounded-xl bg-paper p-4 transition hover:bg-brand-50"
+                    >
                       <p className="text-[15px] font-semibold">{t.title}</p>
                       <p className="mt-1 text-[13px] text-ink-400">
-                        {getSection(t.sectionId).title} · осталось {p.total - p.solved} задачи
+                        {t.section_title} · осталось {t.remaining} задачи
                       </p>
                       <div className="mt-3">
-                        <ProgressBar value={p.percent} className="bg-amber-600" height="h-1" />
+                        <ProgressBar value={t.percent} className="bg-amber-600" height="h-1" />
                       </div>
                     </Link>
                   </li>
-                )
-              })}
-            </ul>
+                ))}
+              </ul>
+            )}
           </div>
 
           <div className="card p-5">
@@ -200,8 +250,8 @@ export default function ProgressPage() {
               <p className="text-[15px] font-bold">План под цель</p>
             </div>
             <p className="mt-3 text-[14px] leading-relaxed text-ink-500">
-              Для БВИ в {USER.goal} нужен диплом призёра Физтеха или Росатома по физике и подтверждение ЕГЭ от 75
-              баллов.
+              Для БВИ в {user.goal || 'выбранный вуз'} нужен диплом призёра Физтеха или Росатома по физике и
+              подтверждение ЕГЭ от 75 баллов.
             </p>
             <button className="btn-secondary mt-4 w-full" onClick={() => navigate('/base')}>
               Проверить условия вуза
@@ -213,14 +263,34 @@ export default function ProgressPage() {
               <Icon name="chart" className="h-5 w-5 text-brand-600" />
               <p className="text-[15px] font-bold">Слабые места</p>
             </div>
-            <ul className="mt-4 space-y-2.5 text-[14px] leading-relaxed text-ink-500">
-              <li>Сложный уровень в «Постоянном токе» — 1 задача из 2 не решена</li>
-              <li>Стереометрия не начата, а на Физтехе встречается ежегодно</li>
-              <li>Диофантовы уравнения — прогресс 17%</li>
-            </ul>
+            {weakSpots.length === 0 ? (
+              <p className="mt-4 text-[14px] leading-relaxed text-ink-400">
+                Пока не над чем работать — начните хотя бы одну тему.
+              </p>
+            ) : (
+              <ul className="mt-4 space-y-2.5 text-[14px] leading-relaxed text-ink-500">
+                {weakSpots.map((w) => (
+                  <li key={w.topic_id}>
+                    «{w.title}» — {w.reason}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </aside>
       </div>
     </div>
   )
+}
+
+export default function ProgressPage() {
+  const { user, authLoading } = useAuth()
+
+  if (authLoading) {
+    return <p className="py-24 text-center text-ink-400">Проверяем сессию…</p>
+  }
+  if (!user) {
+    return <LoginGate />
+  }
+  return <CabinetContent user={user} />
 }
