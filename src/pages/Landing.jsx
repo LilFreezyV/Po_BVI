@@ -1,16 +1,10 @@
 import React from 'react'
-import { AUDIENCE, OLYMPIADS, PLANS, STEPS, UNIVERSITIES } from '../data/site.js'
-import { SECTIONS, TOPICS } from '../data/topics.js'
+import { AUDIENCE, STEPS } from '../data/site.js'
+import { listOlympiads, listPlans, listSections, listTopics, listUniversities } from '../lib/api.js'
+import { useAsync } from '../lib/useAsync.js'
 import { Chip, Icon, Link, ProgressBar, SectionHeading, navigate } from '../components/ui.jsx'
 
-const stats = [
-  { value: OLYMPIADS.length, label: 'перечневых олимпиад в базе' },
-  { value: TOPICS.length, label: 'тем по физике и математике' },
-  { value: TOPICS.length * 6, label: 'задач трёх уровней сложности' },
-  { value: '6', label: 'вузов с разбором льгот' },
-]
-
-function Hero() {
+function Hero({ stats }) {
   return (
     <section className="relative overflow-hidden">
       <div className="grid-paper pointer-events-none absolute inset-0 -z-10" />
@@ -196,7 +190,7 @@ function HowItWorks() {
   )
 }
 
-function Bases() {
+function Bases({ olympiads, universities }) {
   return (
     <section className="container-x py-16 lg:py-24">
       <div className="flex flex-wrap items-end justify-between gap-6">
@@ -215,7 +209,7 @@ function Bases() {
       </div>
 
       <div className="mt-10 grid gap-4 md:grid-cols-3">
-        {OLYMPIADS.slice(0, 3).map((o) => (
+        {olympiads.slice(0, 3).map((o) => (
           <article key={o.id} className="card p-6 transition hover:shadow-lift">
             <div className="flex items-start justify-between gap-3">
               <h3 className="text-[19px] font-bold">{o.title}</h3>
@@ -226,7 +220,7 @@ function Bases() {
             <div className="mt-5 flex flex-wrap gap-2 border-t border-line pt-4">
               {o.subjects.map((s) => (
                 <Chip key={s} className="border border-line bg-paper text-ink-500">
-                  {s}
+                  {s === 'physics' ? 'Физика' : s === 'math' ? 'Математика' : s}
                 </Chip>
               ))}
               <Chip className="border border-line bg-paper text-ink-500">{o.grades}</Chip>
@@ -236,7 +230,7 @@ function Bases() {
       </div>
 
       <div className="mt-4 grid gap-4 md:grid-cols-3">
-        {UNIVERSITIES.slice(0, 3).map((u) => (
+        {universities.slice(0, 3).map((u) => (
           <article key={u.id} className="card flex items-start gap-4 p-6">
             <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-brand-700 text-[13px] font-extrabold text-white">
               {u.short}
@@ -245,7 +239,7 @@ function Bases() {
               <h3 className="text-[16px] font-bold leading-snug">{u.title}</h3>
               <p className="mt-1 text-sm text-ink-400">{u.city}</p>
               <p className="mt-3 text-[14px] leading-relaxed text-ink-500">
-                Принимает: {u.accepts.join(' · ')}
+                Принимает: {u.accepts.map((a) => a.title).join(' · ')}
               </p>
             </div>
           </article>
@@ -303,7 +297,7 @@ function Assistant() {
   )
 }
 
-function Pricing() {
+function Pricing({ plans }) {
   return (
     <section id="pricing" className="container-x scroll-mt-24 py-16 lg:py-24">
       <SectionHeading
@@ -314,7 +308,7 @@ function Pricing() {
       />
 
       <div className="mx-auto mt-12 grid max-w-4xl gap-5 md:grid-cols-2">
-        {PLANS.map((plan) => (
+        {plans.map((plan) => (
           <article
             key={plan.id}
             className={`relative flex flex-col rounded-2xl border p-7 sm:p-8 ${
@@ -328,7 +322,7 @@ function Pricing() {
             )}
             <h3 className="text-[19px] font-bold">{plan.title}</h3>
             <p className="mt-4 flex items-baseline gap-2">
-              <span className="text-[38px] font-extrabold leading-none">{plan.price}</span>
+              <span className="text-[38px] font-extrabold leading-none">{plan.price_display}</span>
               <span className="text-[15px] text-ink-400">{plan.period}</span>
             </p>
             <p className="mt-4 text-[15px] leading-relaxed text-ink-500">{plan.summary}</p>
@@ -359,9 +353,9 @@ function Pricing() {
   )
 }
 
-function FinalCta() {
-  const physics = SECTIONS.filter((s) => s.subject === 'physics').length
-  const math = SECTIONS.filter((s) => s.subject === 'math').length
+function FinalCta({ sections }) {
+  const physics = sections.filter((s) => s.subject === 'physics').length
+  const math = sections.filter((s) => s.subject === 'math').length
 
   return (
     <section className="container-x pb-4">
@@ -390,15 +384,28 @@ function FinalCta() {
 }
 
 export default function Landing() {
+  const { data, loading } = useAsync(
+    () => Promise.all([listTopics(), listOlympiads(), listUniversities(), listPlans(), listSections()]),
+    []
+  )
+  const [topics, olympiads, universities, plans, sections] = data || [[], [], [], [], []]
+
+  const stats = [
+    { value: loading ? '—' : olympiads.length, label: 'перечневых олимпиад в базе' },
+    { value: loading ? '—' : topics.length, label: 'тем по физике и математике' },
+    { value: loading ? '—' : topics.length * 6, label: 'задач трёх уровней сложности' },
+    { value: loading ? '—' : universities.length, label: 'вузов с разбором льгот' },
+  ]
+
   return (
     <>
-      <Hero />
+      <Hero stats={stats} />
       <Audience />
       <HowItWorks />
-      <Bases />
+      {!loading && <Bases olympiads={olympiads} universities={universities} />}
       <Assistant />
-      <Pricing />
-      <FinalCta />
+      {!loading && plans.length > 0 && <Pricing plans={plans} />}
+      {!loading && <FinalCta sections={sections} />}
     </>
   )
 }

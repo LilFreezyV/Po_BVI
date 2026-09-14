@@ -1,3 +1,11 @@
 node_modules
 dist
 .DS_Store
+.env
+.env.local
+
+backend/.venv
+backend/.env
+backend/__pycache__
+backend/**/__pycache__
+backend/*.egg-info

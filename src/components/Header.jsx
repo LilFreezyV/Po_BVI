@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Icon, Link, Logo, navigate } from './ui.jsx'
+import { useAuth } from '../lib/auth.jsx'
 
 const NAV = [
   { to: '/catalog', label: 'Каталог тем' },
@@ -11,6 +12,7 @@ const NAV = [
 export default function Header({ route }) {
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const { user, logout } = useAuth()
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8)
@@ -49,12 +51,25 @@ export default function Header({ route }) {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
-          <button className="btn-ghost px-3 py-2 text-sm" onClick={() => navigate('/progress')}>
-            Войти
-          </button>
-          <button className="btn-primary px-4 py-2.5 text-sm" onClick={() => navigate('/catalog')}>
-            Попробовать бесплатно
-          </button>
+          {user ? (
+            <>
+              <button className="btn-ghost px-3 py-2 text-sm" onClick={() => navigate('/progress')}>
+                {user.name.split(' ')[0]}
+              </button>
+              <button className="btn-secondary px-4 py-2.5 text-sm" onClick={() => { logout(); navigate('/') }}>
+                Выйти
+              </button>
+            </>
+          ) : (
+            <>
+              <button className="btn-ghost px-3 py-2 text-sm" onClick={() => navigate('/login')}>
+                Войти
+              </button>
+              <button className="btn-primary px-4 py-2.5 text-sm" onClick={() => navigate('/catalog')}>
+                Попробовать бесплатно
+              </button>
+            </>
+          )}
         </div>
 
         <button
@@ -81,9 +96,20 @@ export default function Header({ route }) {
                 {item.label}
               </Link>
             ))}
-            <button className="btn-primary mt-2 w-full" onClick={() => navigate('/catalog')}>
-              Попробовать бесплатно
-            </button>
+            {user ? (
+              <button className="btn-secondary mt-2 w-full" onClick={() => { logout(); navigate('/') }}>
+                Выйти ({user.name.split(' ')[0]})
+              </button>
+            ) : (
+              <>
+                <button className="btn-secondary mt-2 w-full" onClick={() => navigate('/login')}>
+                  Войти
+                </button>
+                <button className="btn-primary mt-2 w-full" onClick={() => navigate('/catalog')}>
+                  Попробовать бесплатно
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
