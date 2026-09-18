@@ -99,3 +99,47 @@ class PlanOut(BaseModel):
     features: list[str]
     cta: str
     accent: bool
+
+
+class CurriculumLessonOut(BaseModel):
+    id: str
+    number: int
+    title: str
+    description: str
+    topic_id: str | None
+    problem_count: int = 0
+
+
+class CurriculumModuleOut(BaseModel):
+    id: str
+    title: str
+    lessons: list[CurriculumLessonOut]
+
+
+class CurriculumGradeOut(BaseModel):
+    grade: int
+    modules: list[CurriculumModuleOut]
+
+
+class ProblemSourceOut(BaseModel):
+    id: str
+    title: str
+    authors: str
+    year: int | None
+    license: str | None
+    license_url: str | None
+
+
+class LessonProblemOut(BaseModel):
+    id: str
+    source_id: str
+    number: str
+    text: str
+    figure: str | None
+    answer_image: str | None
+
+
+class LessonProblemsOut(BaseModel):
+    lesson_id: str
+    problems: list[LessonProblemOut]
+    sources: list[ProblemSourceOut]

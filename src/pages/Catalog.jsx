@@ -103,6 +103,13 @@ export default function Catalog() {
           Темы сгруппированы по разделам школьного курса, но отобраны под олимпиадные требования. Внутри темы —
           конспект теории и задачи трёх уровней сложности.
         </p>
+        <Link
+          to="/program"
+          className="mt-4 inline-flex items-center gap-2 text-[15px] font-semibold text-brand-700 hover:text-brand-900"
+        >
+          Программа по физике для 9, 10 и 11 класса
+          <Icon name="arrow" className="h-4 w-4" />
+        </Link>
       </div>
 
       <div className="sticky top-[68px] z-30 -mx-5 mt-8 border-b border-line bg-paper/90 px-5 py-4 backdrop-blur-md sm:-mx-8 sm:px-8">

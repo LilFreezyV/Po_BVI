@@ -142,6 +142,78 @@ class UniversityOlympiad(Base):
     olympiad: Mapped["Olympiad"] = relationship(back_populates="university_links")
 
 
+class CurriculumModule(Base):
+    """Тема учебной программы класса (например, «Кинематика. Повторение» в 9 классе)."""
+
+    __tablename__ = "curriculum_modules"
+    __table_args__ = (UniqueConstraint("subject", "grade", "position"),)
+
+    id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    subject: Mapped[SubjectEnum] = mapped_column(SubjectType, nullable=False)
+    grade: Mapped[int] = mapped_column(Integer, nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    lessons: Mapped[list["CurriculumLesson"]] = relationship(
+        back_populates="module", order_by="CurriculumLesson.number", cascade="all, delete-orphan"
+    )
+
+
+class CurriculumLesson(Base):
+    """Подтема (урок) внутри темы программы. topic_id — необязательная ссылка на тему с задачами."""
+
+    __tablename__ = "curriculum_lessons"
+
+    id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    module_id: Mapped[str] = mapped_column(
+        ForeignKey("curriculum_modules.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    number: Mapped[int] = mapped_column(Integer, nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    topic_id: Mapped[str | None] = mapped_column(ForeignKey("topics.id", ondelete="SET NULL"), nullable=True)
+
+    module: Mapped["CurriculumModule"] = relationship(back_populates="lessons")
+    problems: Mapped[list["LessonProblem"]] = relationship(
+        back_populates="lesson", order_by="LessonProblem.position", cascade="all, delete-orphan"
+    )
+
+
+class ProblemSource(Base):
+    """Задачник, из которого взяты задачи (для указания авторства и лицензии)."""
+
+    __tablename__ = "problem_sources"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    authors: Mapped[str] = mapped_column(String(255), nullable=False)
+    year: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    license: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    license_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+
+class LessonProblem(Base):
+    """Задача из задачника, привязанная к подтеме программы. Рисунок и ответ — картинки из
+    public/problems/<source>/ (fig/, ans/), пути относительные."""
+
+    __tablename__ = "lesson_problems"
+    __table_args__ = (UniqueConstraint("source_id", "number"),)
+
+    id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    lesson_id: Mapped[str] = mapped_column(
+        ForeignKey("curriculum_lessons.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    source_id: Mapped[str] = mapped_column(ForeignKey("problem_sources.id", ondelete="CASCADE"), nullable=False)
+    number: Mapped[str] = mapped_column(String(32), nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    figure: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    answer_image: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    lesson: Mapped["CurriculumLesson"] = relationship(back_populates="problems")
+    source: Mapped["ProblemSource"] = relationship()
+
+
 class Plan(Base):
     __tablename__ = "plans"
 

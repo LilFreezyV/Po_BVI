@@ -1,9 +1,13 @@
 from app.models.base import Base
 from app.models.content import (
+    CurriculumLesson,
+    CurriculumModule,
+    LessonProblem,
     Olympiad,
     OlympiadSubject,
     Plan,
     PlanFeature,
+    ProblemSource,
     Section,
     Task,
     TheoryPoint,
@@ -28,6 +32,10 @@ __all__ = [
     "UniversityOlympiad",
     "Plan",
     "PlanFeature",
+    "CurriculumModule",
+    "CurriculumLesson",
+    "ProblemSource",
+    "LessonProblem",
     "User",
     "TaskAttempt",
 ]

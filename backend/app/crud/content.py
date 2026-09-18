@@ -5,14 +5,31 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.crud import progress as progress_crud
-from app.models.content import Olympiad, Plan, Section, Topic, TopicOlympiad, University, UniversityOlympiad
+from app.models.content import (
+    CurriculumLesson,
+    CurriculumModule,
+    LessonProblem,
+    Olympiad,
+    Plan,
+    Section,
+    Topic,
+    TopicOlympiad,
+    University,
+    UniversityOlympiad,
+)
 from app.models.enums import LevelEnum, SubjectEnum
 from app.models.user import User
 from app.schemas.common import TopicProgressOut
 from app.schemas.content import (
+    CurriculumGradeOut,
+    CurriculumLessonOut,
+    CurriculumModuleOut,
+    LessonProblemOut,
+    LessonProblemsOut,
     OlympiadOut,
     OlympiadSummaryOut,
     PlanOut,
+    ProblemSourceOut,
     SectionOut,
     TaskOut,
     TheoryOut,
@@ -197,3 +214,80 @@ async def list_plans(session: AsyncSession) -> list[PlanOut]:
         )
         for p in plans
     ]
+
+
+async def list_curriculum(session: AsyncSession, subject: SubjectEnum) -> list[CurriculumGradeOut]:
+    stmt = (
+        select(CurriculumModule)
+        .where(CurriculumModule.subject == subject)
+        .options(selectinload(CurriculumModule.lessons))
+        .order_by(CurriculumModule.grade, CurriculumModule.position)
+    )
+    modules = (await session.execute(stmt)).scalars().all()
+
+    counts = dict(
+        (
+            await session.execute(
+                select(LessonProblem.lesson_id, func.count(LessonProblem.id)).group_by(LessonProblem.lesson_id)
+            )
+        ).all()
+    )
+
+    grades: dict[int, list[CurriculumModuleOut]] = {}
+    for module in modules:
+        grades.setdefault(module.grade, []).append(
+            CurriculumModuleOut(
+                id=module.id,
+                title=module.title,
+                lessons=[
+                    CurriculumLessonOut(
+                        id=lesson.id,
+                        number=lesson.number,
+                        title=lesson.title,
+                        description=lesson.description,
+                        topic_id=lesson.topic_id,
+                        problem_count=counts.get(lesson.id, 0),
+                    )
+                    for lesson in module.lessons
+                ],
+            )
+        )
+    return [CurriculumGradeOut(grade=grade, modules=items) for grade, items in grades.items()]
+
+
+async def get_lesson_problems(session: AsyncSession, lesson_id: str) -> LessonProblemsOut | None:
+    if await session.get(CurriculumLesson, lesson_id) is None:
+        return None
+    stmt = (
+        select(LessonProblem)
+        .where(LessonProblem.lesson_id == lesson_id)
+        .options(selectinload(LessonProblem.source))
+        .order_by(LessonProblem.position)
+    )
+    problems = (await session.execute(stmt)).scalars().all()
+    sources = {p.source.id: p.source for p in problems}
+    return LessonProblemsOut(
+        lesson_id=lesson_id,
+        problems=[
+            LessonProblemOut(
+                id=p.id,
+                source_id=p.source_id,
+                number=p.number,
+                text=p.text,
+                figure=p.figure,
+                answer_image=p.answer_image,
+            )
+            for p in problems
+        ],
+        sources=[
+            ProblemSourceOut(
+                id=src.id,
+                title=src.title,
+                authors=src.authors,
+                year=src.year,
+                license=src.license,
+                license_url=src.license_url,
+            )
+            for src in sources.values()
+        ],
+    )
