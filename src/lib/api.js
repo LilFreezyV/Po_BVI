@@ -93,6 +93,8 @@ export const getTopic = (id, token) => request(`/topics/${id}`, { token })
 export const listOlympiads = () => request('/olympiads')
 export const listUniversities = () => request('/universities')
 export const listPlans = () => request('/plans')
+export const listCurriculum = (subject = 'physics') => request(`/curriculum?subject=${subject}`)
+export const listLessonProblems = (lessonId) => request(`/curriculum/lessons/${lessonId}/problems`)
 
 /* ——— Авторизация ——— */
 

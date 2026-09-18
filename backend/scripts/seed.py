@@ -7,15 +7,20 @@
 Запуск: python -m scripts.seed
 """
 import asyncio
+from pathlib import Path
 
 from sqlalchemy import delete, func, select
 
 from app.database import async_session_factory
 from app.models.content import (
+    CurriculumLesson,
+    CurriculumModule,
+    LessonProblem,
     Olympiad,
     OlympiadSubject,
     Plan,
     PlanFeature,
+    ProblemSource,
     Section,
     Task,
     TheoryPoint,
@@ -24,7 +29,19 @@ from app.models.content import (
     University,
     UniversityOlympiad,
 )
+from scripts.curriculum_data import CURRICULUM, iter_modules, lesson_id, module_id
+from scripts import problems_savchenko_baldin as savchenko_baldin
 from scripts.seed_data import OLYMPIAD_TITLE_TO_ID, OLYMPIADS, PLANS, SECTIONS, TOPICS, UNIVERSITIES
+
+
+# Задачники: модуль с SOURCE и PROBLEMS. Картинки лежат во фронтенде: public/problems/<id>/{fig,ans}/<номер>.png
+PROBLEM_BOOKS = [savchenko_baldin]
+PUBLIC_DIR = Path(__file__).resolve().parents[2] / "public"
+
+
+def _asset(source_id: str, kind: str, number: str) -> str | None:
+    rel = f"problems/{source_id}/{kind}/{number}.png"
+    return rel if (PUBLIC_DIR / rel).exists() else None
 
 
 def _assert_data_integrity() -> None:
@@ -34,6 +51,27 @@ def _assert_data_integrity() -> None:
     assert len(OLYMPIADS) == 5, f"Ожидалось 5 олимпиад, получено {len(OLYMPIADS)}"
     assert len(UNIVERSITIES) == 6, f"Ожидалось 6 вузов, получено {len(UNIVERSITIES)}"
     assert len(PLANS) == 2, f"Ожидалось 2 тарифа, получено {len(PLANS)}"
+
+    topic_ids = {t["id"] for t in TOPICS}
+    for course in CURRICULUM:
+        numbers = [lesson[0] for module in course["modules"] for lesson in module["lessons"]]
+        assert numbers == list(range(1, len(numbers) + 1)), (
+            f"{course['grade']} класс: номера подтем должны идти подряд с 1"
+        )
+        for module in course["modules"]:
+            for number, _title, _description, topic_id in module["lessons"]:
+                assert topic_id is None or topic_id in topic_ids, (
+                    f"{course['grade']} класс, подтема {number}: нет темы {topic_id!r}"
+                )
+
+    lessons = {(c["grade"], l[0]) for c in CURRICULUM for m in c["modules"] for l in m["lessons"]}
+    for book in PROBLEM_BOOKS:
+        numbers = [n for n, _, _ in book.PROBLEMS]
+        assert len(numbers) == len(set(numbers)), f"{book.SOURCE['id']}: повторяются номера задач"
+        for number, ref, text in book.PROBLEMS:
+            assert ref in lessons, f"{book.SOURCE['id']} {number}: нет подтемы {ref}"
+            if "рисун" in text and "покажите" not in text.lower():
+                assert _asset(book.SOURCE["id"], "fig", number), f"{book.SOURCE['id']} {number}: нет файла рисунка"
 
 
 async def seed() -> None:
@@ -141,6 +179,63 @@ async def seed() -> None:
             for position, text in enumerate(row["features"]):
                 session.add(PlanFeature(plan_id=row["id"], position=position, text=text))
 
+        # Программа по классам. Строк-зависимостей у неё нет, поэтому проще всего
+        # пересобрать целиком: удалить модули предметов из данных (уроки уйдут каскадом)
+        # и вставить заново — так корректно отрабатывают и переименования, и удаления.
+        subjects = {course["subject"] for course in CURRICULUM}
+        await session.execute(delete(CurriculumModule).where(CurriculumModule.subject.in_(subjects)))
+        await session.flush()
+        for subject, grade, position, module in iter_modules():
+            mid = module_id(subject, grade, module["slug"])
+            session.add(
+                CurriculumModule(id=mid, subject=subject, grade=grade, position=position, title=module["title"])
+            )
+            for number, title, description, topic_id in module["lessons"]:
+                session.add(
+                    CurriculumLesson(
+                        id=lesson_id(subject, grade, number),
+                        module_id=mid,
+                        number=number,
+                        title=title,
+                        description=description,
+                        topic_id=topic_id,
+                    )
+                )
+
+        # Задачи из задачников к подтемам. Строки lesson_problems удалились каскадом вместе с
+        # подтемами выше — вставляем заново.
+        await session.flush()
+        for book in PROBLEM_BOOKS:
+            src = book.SOURCE
+            await session.merge(
+                ProblemSource(
+                    id=src["id"],
+                    title=src["title"],
+                    authors=src["authors"],
+                    year=src.get("year"),
+                    license=src.get("license"),
+                    license_url=src.get("license_url"),
+                )
+            )
+            await session.flush()
+            await session.execute(delete(LessonProblem).where(LessonProblem.source_id == src["id"]))
+            per_lesson: dict[str, int] = {}
+            for number, (grade, lesson_number), text in book.PROBLEMS:
+                lid = lesson_id("physics", grade, lesson_number)
+                per_lesson[lid] = per_lesson.get(lid, 0) + 1
+                session.add(
+                    LessonProblem(
+                        id=f"{src['id']}-{number}",
+                        lesson_id=lid,
+                        source_id=src["id"],
+                        number=number,
+                        position=per_lesson[lid],
+                        text=text,
+                        figure=_asset(src["id"], "fig", number),
+                        answer_image=_asset(src["id"], "ans", number),
+                    )
+                )
+
         await session.commit()
 
         topics_count = await session.scalar(select(func.count(Topic.id)))
@@ -148,10 +243,13 @@ async def seed() -> None:
         olympiads_count = await session.scalar(select(func.count(Olympiad.id)))
         universities_count = await session.scalar(select(func.count(University.id)))
         plans_count = await session.scalar(select(func.count(Plan.id)))
+        lessons_count = await session.scalar(select(func.count(CurriculumLesson.id)))
+        problems_count = await session.scalar(select(func.count(LessonProblem.id)))
 
         print(
             f"Засеяно: {topics_count} тем, {tasks_count} задач, {olympiads_count} олимпиад, "
-            f"{universities_count} вузов, {plans_count} тарифов"
+            f"{universities_count} вузов, {plans_count} тарифов, {lessons_count} подтем в программе, "
+            f"{problems_count} задач к подтемам"
         )
 
 

@@ -3,6 +3,7 @@ import { Icon, Link, Logo, navigate } from './ui.jsx'
 import { useAuth } from '../lib/auth.jsx'
 
 const NAV = [
+  { to: '/program', label: 'Программа' },
   { to: '/catalog', label: 'Каталог тем' },
   { to: '/base', label: 'Олимпиады и вузы' },
   { to: '/progress', label: 'Мой прогресс' },
@@ -36,12 +37,12 @@ export default function Header({ route }) {
           <Logo />
         </Link>
 
-        <nav className="hidden items-center gap-1 md:flex">
+        <nav className="hidden items-center gap-1 lg:flex">
           {NAV.map((item) => (
             <Link
               key={item.to}
               to={item.to}
-              className={`rounded-lg px-3 py-2 text-[15px] font-semibold transition ${
+              className={`whitespace-nowrap rounded-lg px-3 py-2 text-[15px] font-semibold transition ${
                 isActive(item.to) ? 'bg-brand-50 text-brand-700' : 'text-ink-500 hover:bg-brand-50/60 hover:text-ink-900'
               }`}
             >
@@ -50,7 +51,7 @@ export default function Header({ route }) {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-2 md:flex">
+        <div className="hidden items-center gap-2 lg:flex">
           {user ? (
             <>
               <button className="btn-ghost px-3 py-2 text-sm" onClick={() => navigate('/progress')}>
@@ -73,7 +74,7 @@ export default function Header({ route }) {
         </div>
 
         <button
-          className="grid h-10 w-10 place-items-center rounded-lg border border-line text-ink-700 md:hidden"
+          className="grid h-10 w-10 place-items-center rounded-lg border border-line text-ink-700 lg:hidden"
           onClick={() => setOpen((v) => !v)}
           aria-label={open ? 'Закрыть меню' : 'Открыть меню'}
           aria-expanded={open}
@@ -83,7 +84,7 @@ export default function Header({ route }) {
       </div>
 
       {open && (
-        <div className="border-t border-line bg-paper md:hidden">
+        <div className="border-t border-line bg-paper lg:hidden">
           <div className="container-x flex flex-col gap-1 py-3">
             {NAV.map((item) => (
               <Link

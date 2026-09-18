@@ -5,6 +5,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     database_url: str
+    # SSL к БД: 'require' нужен для Neon; 'disable' — для локального Postgres без SSL
+    database_ssl: str = "require"
     jwt_secret: str
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24 * 7
