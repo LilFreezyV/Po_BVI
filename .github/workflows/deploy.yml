@@ -1,0 +1,79 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+
+env:
+  DEPLOY_HOST: 89.111.136.194
+  DEPLOY_USER: deploy
+  REMOTE_PATH: /home/deploy/PO_BVI
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Build frontend
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+        run: npm run build
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+
+      - name: Upload new release
+        id: release
+        run: |
+          TS=$(date +%Y%m%d%H%M%S)
+          echo "ts=$TS" >> "$GITHUB_OUTPUT"
+          ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p $REMOTE_PATH/releases/$TS"
+          rsync -az -e "ssh -i ~/.ssh/deploy_key" dist/ "$DEPLOY_USER@$DEPLOY_HOST:$REMOTE_PATH/releases/$TS/"
+
+      - name: Switch current symlink
+        run: |
+          ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" \
+            "ln -sfn releases/${{ steps.release.outputs.ts }} $REMOTE_PATH/current"
+
+      - name: Update backend code and run migrations
+        run: |
+          ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" "
+            set -e
+            cd $REMOTE_PATH
+            git pull
+            source backend/.venv/bin/activate
+            pip install -q -r backend/requirements.txt
+            cd backend
+            python -m alembic upgrade head
+          "
+
+      - name: Restart services
+        run: |
+          ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" \
+            "sudo systemctl restart bvi-backend && sudo systemctl reload nginx"
+
+      - name: Health check
+        run: |
+          sleep 3
+          curl -sf "http://$DEPLOY_HOST/api/subjects" > /dev/null && echo "Деплой ОК" || (echo "Бэкенд не отвечает после деплоя!" && exit 1)
+          curl -sf -o /dev/null "http://$DEPLOY_HOST/" && echo "Фронтенд ОК" || (echo "Фронтенд не отвечает после деплоя!" && exit 1)
+
+      - name: Clean up old releases (keep last 5)
+        if: always()
+        run: |
+          ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd $REMOTE_PATH/releases && ls -t | tail -n +6 | xargs -r rm -rf"
