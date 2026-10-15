@@ -38,9 +38,32 @@ export default {
           600: '#A87A1B',
           700: '#84600F',
         },
+        // Новая палитра для редизайна лендинга («тетрадь и чертёж») — пока только
+        // там, остальной сайт на brand/clay. Чернильный синий вместо хвойного зелёного.
+        pen: {
+          50: '#EEF1F7',
+          100: '#D7DEEC',
+          200: '#AEBEDA',
+          300: '#7F94BE',
+          500: '#3A4F82',
+          600: '#2B3C68',
+          700: '#1E2C4F',
+          800: '#141F3A',
+          900: '#0C1527',
+        },
+        // Красные чернила учительской правки — вместо терракоты.
+        mark: {
+          50: '#FBECE9',
+          100: '#F3CDC4',
+          400: '#D8604A',
+          500: '#B23A2A',
+          600: '#8E2B1E',
+        },
       },
       fontFamily: {
         sans: ['Manrope', 'Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        serif: ['Fraunces', 'Georgia', 'Iowan Old Style', 'serif'],
+        mono: ['"IBM Plex Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
       borderRadius: {
         xl: '0.875rem',
