@@ -1,15 +1,16 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { LEVELS } from '../data/topics.js'
 import { AI_SUGGESTIONS, STATUS_META } from '../data/site.js'
-import { getTopic as fetchTopic } from '../lib/api.js'
+import { getTopic as fetchTopic, setTaskStatus } from '../lib/api.js'
+import AttemptButtons, { ATTEMPT_CARD } from '../components/AttemptButtons.jsx'
 import { useAsync } from '../lib/useAsync.js'
 import { useAuth } from '../lib/auth.jsx'
 import { Chip, Icon, Link, ProgressBar, navigate } from '../components/ui.jsx'
 
-function TaskCard({ task, index }) {
+function TaskCard({ task, index, status, onStatus }) {
   const [open, setOpen] = useState(false)
   return (
-    <li className="rounded-xl border border-line bg-white p-4 sm:p-5">
+    <li className={`rounded-xl border p-4 transition sm:p-5 ${ATTEMPT_CARD[status] || 'border-line bg-white'}`}>
       <div className="flex gap-4">
         <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-paper text-[13px] font-bold text-ink-500">
           {index}
@@ -31,13 +32,18 @@ function TaskCard({ task, index }) {
               {task.hint || 'Подсказка появится в следующих обновлениях.'}
             </div>
           )}
+          {!task.locked && (
+            <div className="mt-3 border-t border-line/70 pt-3">
+              <AttemptButtons status={status} onChange={(s) => onStatus(task.id, s)} />
+            </div>
+          )}
         </div>
       </div>
     </li>
   )
 }
 
-function LevelBlock({ level, tasks, locked }) {
+function LevelBlock({ level, tasks, locked, statusOf, onStatus }) {
   return (
     <section className="card overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
@@ -51,7 +57,7 @@ function LevelBlock({ level, tasks, locked }) {
       <div className="relative">
         <ul className={`space-y-3 p-4 sm:p-5 ${locked ? 'pointer-events-none select-none blur-[5px]' : ''}`}>
           {tasks.map((task, i) => (
-            <TaskCard key={task.id} task={task} index={i + 1} />
+            <TaskCard key={task.id} task={task} index={i + 1} status={statusOf(task)} onStatus={onStatus} />
           ))}
         </ul>
 
@@ -136,6 +142,22 @@ function Assistant({ topic }) {
 export default function TopicPage({ topicId }) {
   const { token } = useAuth()
   const { data: topic, loading, error } = useAsync(() => fetchTopic(topicId, token), [topicId, token])
+  // Отметки и прогресс после нажатий — поверх загруженной темы, без перезагрузки страницы.
+  const [statuses, setStatuses] = useState({})
+  const [progressOverride, setProgressOverride] = useState(null)
+
+  useEffect(() => {
+    setStatuses({})
+    setProgressOverride(null)
+  }, [topic])
+
+  const statusOf = (task) => (task.id in statuses ? statuses[task.id] : task.status)
+
+  const onStatus = async (taskId, status) => {
+    const res = await setTaskStatus(token, taskId, status)
+    setStatuses((prev) => ({ ...prev, [taskId]: res.status }))
+    setProgressOverride(res.topic_progress)
+  }
 
   if (loading) {
     return <div className="container-x py-24 text-center text-ink-400">Загружаем тему…</div>
@@ -161,7 +183,8 @@ export default function TopicPage({ topicId }) {
     )
   }
 
-  const meta = STATUS_META[topic.progress.status]
+  const progress = progressOverride || topic.progress
+  const meta = STATUS_META[progress.status]
 
   return (
     <div className="container-x py-8 lg:py-12">
@@ -226,7 +249,7 @@ export default function TopicPage({ topicId }) {
                 </p>
               </div>
               <span className="text-[14px] text-ink-400">
-                Решено {topic.progress.solved} из {topic.progress.total}
+                Решено {progress.solved} из {progress.total}
               </span>
             </div>
 
@@ -237,6 +260,8 @@ export default function TopicPage({ topicId }) {
                   level={level}
                   tasks={topic.tasks[level.id]}
                   locked={topic.locked && level.id !== 'easy'}
+                  statusOf={statusOf}
+                  onStatus={onStatus}
                 />
               ))}
             </div>
@@ -272,13 +297,13 @@ export default function TopicPage({ topicId }) {
           <div className="card p-5">
             <p className="text-[15px] font-bold">Прогресс по теме</p>
             <div className="mt-4 flex items-baseline justify-between">
-              <span className="text-[30px] font-extrabold leading-none">{topic.progress.percent}%</span>
+              <span className="text-[30px] font-extrabold leading-none">{progress.percent}%</span>
               <span className="text-[13px] text-ink-400">
-                {topic.progress.solved}/{topic.progress.total} задач
+                {progress.solved}/{progress.total} задач
               </span>
             </div>
             <div className="mt-3">
-              <ProgressBar value={topic.progress.percent} className={meta.bar} />
+              <ProgressBar value={progress.percent} className={meta.bar} />
             </div>
             <button className="btn-secondary mt-5 w-full" onClick={() => navigate('/progress')}>
               Открыть кабинет

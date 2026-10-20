@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { listCurriculum, listLessonProblems, listLiterature, listTopics } from '../lib/api.js'
+import { listCurriculum, listLessonProblems, listLiterature, listTopics, setProblemStatus } from '../lib/api.js'
 import { useAsync } from '../lib/useAsync.js'
+import { useAuth } from '../lib/auth.jsx'
+import AttemptButtons, { ATTEMPT_CARD } from '../components/AttemptButtons.jsx'
 import { Chip, Icon, Link } from '../components/ui.jsx'
 import MathText from '../components/MathText.jsx'
 
@@ -45,10 +47,10 @@ function AnswerImage({ src, number }) {
   )
 }
 
-function ProblemItem({ problem }) {
+function ProblemItem({ problem, status, onStatus }) {
   const [showAnswer, setShowAnswer] = useState(false)
   return (
-    <li className="rounded-xl border border-line bg-white p-4">
+    <li className={`rounded-xl border p-4 transition ${ATTEMPT_CARD[status] || 'border-line bg-white'}`}>
       <div className="flex gap-3">
         <span className="mt-0.5 shrink-0 rounded-md bg-paper px-1.5 py-0.5 text-[12px] font-bold tabular-nums text-ink-500">
           №{problem.number}
@@ -79,6 +81,9 @@ function ProblemItem({ problem }) {
           ) : (
             <p className="mt-3 text-[13px] text-ink-400">Ответа в сборнике нет.</p>
           )}
+          <div className="mt-3 border-t border-line/70 pt-3">
+            <AttemptButtons status={status} onChange={(s) => onStatus(problem.id, s)} />
+          </div>
         </div>
       </div>
     </li>
@@ -86,14 +91,27 @@ function ProblemItem({ problem }) {
 }
 
 function LessonProblems({ lessonId }) {
-  const { data, loading, error } = useAsync(() => listLessonProblems(lessonId), [lessonId])
+  const { token } = useAuth()
+  const { data, loading, error } = useAsync(() => listLessonProblems(lessonId, token), [lessonId, token])
+  const [statuses, setStatuses] = useState({})
   if (loading) return <p className="mt-3 text-[14px] text-ink-400">Загружаем задачи…</p>
   if (error) return <p className="mt-3 text-[14px] text-ink-400">Не удалось загрузить задачи.</p>
+
+  const onStatus = async (problemId, status) => {
+    const res = await setProblemStatus(token, problemId, status)
+    setStatuses((prev) => ({ ...prev, [problemId]: res.status }))
+  }
+
   return (
     <div className="mt-3">
       <ol className="space-y-3">
         {data.problems.map((p) => (
-          <ProblemItem key={p.id} problem={p} />
+          <ProblemItem
+            key={p.id}
+            problem={p}
+            status={p.id in statuses ? statuses[p.id] : p.status}
+            onStatus={onStatus}
+          />
         ))}
       </ol>
       {data.sources.map((s) => (
@@ -290,10 +308,18 @@ const topicsWord = (n) => {
   return 'тем'
 }
 
-function LessonRow({ lesson, topicTitle, sources }) {
-  const [open, setOpen] = useState(false)
+function LessonRow({ lesson, topicTitle, sources, focused }) {
+  const [open, setOpen] = useState(focused)
+  useEffect(() => {
+    if (focused) setOpen(true)
+  }, [focused])
   return (
-    <li className="flex gap-4 border-t border-line px-5 py-4 first:border-t-0 sm:px-6">
+    <li
+      id={lesson.id}
+      className={`flex scroll-mt-[240px] gap-4 border-t border-line px-5 py-4 first:border-t-0 sm:px-6 lg:scroll-mt-[160px] ${
+        focused ? 'bg-amber-50/60' : ''
+      }`}
+    >
       <span className="mt-0.5 grid h-7 min-w-[28px] shrink-0 place-items-center rounded-lg bg-paper px-1.5 text-[13px] font-bold tabular-nums text-ink-500">
         {lesson.number}
       </span>
@@ -336,7 +362,7 @@ function LessonRow({ lesson, topicTitle, sources }) {
   )
 }
 
-function ModuleCard({ module, index, open, onToggle, topicTitle, showRange, sources }) {
+function ModuleCard({ module, index, open, onToggle, topicTitle, showRange, sources, focusLesson }) {
   const count = module.lessons.length
   const first = module.lessons[0]?.number
   const last = module.lessons[count - 1]?.number
@@ -365,7 +391,13 @@ function ModuleCard({ module, index, open, onToggle, topicTitle, showRange, sour
       {open && (
         <ol className="border-t border-line">
           {module.lessons.map((lesson) => (
-            <LessonRow key={lesson.id} lesson={lesson} topicTitle={topicTitle(lesson.topic_id)} sources={sources} />
+            <LessonRow
+              key={lesson.id}
+              lesson={lesson}
+              topicTitle={topicTitle(lesson.topic_id)}
+              sources={sources}
+              focused={lesson.id === focusLesson}
+            />
           ))}
         </ol>
       )}
@@ -373,8 +405,15 @@ function ModuleCard({ module, index, open, onToggle, topicTitle, showRange, sour
   )
 }
 
-export default function Program() {
-  const [subject, setSubject] = useState(readSavedSubject)
+// id подтемы вида «physics-9-05» → предмет и класс.
+function parseLessonId(id) {
+  const m = /^(physics|math)-(\d+)-\d+$/.exec(id || '')
+  return m ? { subject: m[1], grade: Number(m[2]) } : null
+}
+
+export default function Program({ focusLesson = null }) {
+  const focus = parseLessonId(focusLesson)
+  const [subject, setSubject] = useState(() => focus?.subject || readSavedSubject())
   const { data, loading, error } = useAsync(
     () => Promise.all([listCurriculum(subject), listTopics(), listLiterature(subject)]),
     [subject]
@@ -383,9 +422,21 @@ export default function Program() {
   const sources = useMemo(() => Object.fromEntries(literature.map((s) => [s.id, s])), [literature])
   const meta = SUBJECTS[subject]
 
-  const [grade, setGrade] = useState(readSavedGrade)
+  const [grade, setGrade] = useState(() => focus?.grade || readSavedGrade())
   const [query, setQuery] = useState('')
   const [collapsed, setCollapsed] = useState({})
+
+  useEffect(() => {
+    if (!focus) return
+    setSubject(focus.subject)
+    setGrade(focus.grade)
+    setQuery('')
+  }, [focusLesson]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!focusLesson || loading) return
+    requestAnimationFrame(() => document.getElementById(focusLesson)?.scrollIntoView({ block: 'start' }))
+  }, [focusLesson, loading, grade])
 
   const selectSubject = (value) => {
     setSubject(value)
@@ -591,6 +642,7 @@ export default function Program() {
                   topicTitle={topicTitle}
                   showRange={!searching}
                   sources={sources}
+                  focusLesson={focusLesson}
                 />
               ))}
             </div>

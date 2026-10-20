@@ -35,10 +35,18 @@ async def test_curriculum_links_point_to_existing_topics(client):
 
 
 @pytest.mark.asyncio
-async def test_math_curriculum_empty_for_now(client):
+async def test_math_curriculum_with_references(client):
     response = await client.get("/api/curriculum", params={"subject": "math"})
     assert response.status_code == 200
-    assert response.json() == []
+    grades = response.json()
+    assert [g["grade"] for g in grades] == [9, 10, 11]
+    lessons = [lesson for g in grades for m in g["modules"] for lesson in m["lessons"]]
+    assert sum(len(lesson["references"]) for lesson in lessons) == 117
+    assert all(lesson["problem_count"] == 0 for lesson in lessons)   # тексты из книг не копируются
+
+    literature = (await client.get("/api/curriculum/literature", params={"subject": "math"})).json()
+    source_ids = {s["id"] for s in literature}
+    assert {ref["source_id"] for lesson in lessons for ref in lesson["references"]} <= source_ids
 
 
 @pytest.mark.asyncio

@@ -94,7 +94,7 @@ export const listOlympiads = () => request('/olympiads')
 export const listUniversities = () => request('/universities')
 export const listPlans = () => request('/plans')
 export const listCurriculum = (subject = 'physics') => request(`/curriculum?subject=${subject}`)
-export const listLessonProblems = (lessonId) => request(`/curriculum/lessons/${lessonId}/problems`)
+export const listLessonProblems = (lessonId, token) => request(`/curriculum/lessons/${lessonId}/problems`, { token })
 export const listLiterature = (subject = 'physics') => request(`/curriculum/literature?subject=${subject}`)
 
 /* ——— Авторизация ——— */
@@ -116,5 +116,10 @@ export const progressSubjects = (token) => request('/progress/subjects', { token
 export const progressOverview = (token) => request('/progress/overview', { token })
 export const progressContinue = (token) => request('/progress/continue', { token })
 export const progressWeakSpots = (token) => request('/progress/weak-spots', { token })
-export const recordAttempt = (token, taskId, solved = true) =>
-  request('/progress/attempts', { method: 'POST', token, body: { task_id: taskId, solved } })
+export const progressQuestions = (token) => request('/progress/questions', { token })
+export const progressProblemBooks = (token) => request('/progress/problem-books', { token })
+// status: 'solved' | 'question' | null (null снимает отметку)
+export const setTaskStatus = (token, taskId, status) =>
+  request('/progress/attempts', { method: 'POST', token, body: { task_id: taskId, status } })
+export const setProblemStatus = (token, problemId, status) =>
+  request('/progress/problem-attempts', { method: 'POST', token, body: { problem_id: problemId, status } })

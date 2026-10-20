@@ -4,6 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.crud import content as content_crud
 from app.database import get_db
 from app.models.enums import SubjectEnum
+from app.models.user import User
+from app.security import get_current_user_optional
 from app.schemas.content import CurriculumGradeOut, LessonProblemsOut, LiteratureSourceOut
 
 router = APIRouter(prefix="/curriculum", tags=["content"])
@@ -26,9 +28,15 @@ async def list_literature(
 
 
 @router.get("/lessons/{lesson_id}/problems", response_model=LessonProblemsOut)
-async def lesson_problems(lesson_id: str, session: AsyncSession = Depends(get_db)) -> LessonProblemsOut:
-    """Задачи из задачников к подтеме. Открыты всем: тексты под GNU FDL, пейвола нет."""
-    result = await content_crud.get_lesson_problems(session, lesson_id)
+async def lesson_problems(
+    lesson_id: str,
+    session: AsyncSession = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional),
+) -> LessonProblemsOut:
+    """Задачи из задачников к подтеме. Открыты всем: тексты под GNU FDL, пейвола нет.
+    Для вошедшего пользователя — с его отметками (status)."""
+    user_id = current_user.id if current_user else None
+    result = await content_crud.get_lesson_problems(session, lesson_id, user_id)
     if result is None:
         raise HTTPException(status_code=404, detail="Подтема не найдена")
     return result
