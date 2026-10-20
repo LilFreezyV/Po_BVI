@@ -801,6 +801,11 @@ CURRICULUM = [
     },
 ]
 
+# Математика — черновик в отдельном файле, чтобы не мешать с авторским планом по физике.
+from scripts.curriculum_math import MATH_CURRICULUM  # noqa: E402
+
+CURRICULUM += MATH_CURRICULUM
+
 
 def iter_modules():
     """Плоский обход: (subject, grade, position, module) для каждого модуля."""

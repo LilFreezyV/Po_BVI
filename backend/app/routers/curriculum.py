@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.crud import content as content_crud
 from app.database import get_db
 from app.models.enums import SubjectEnum
-from app.schemas.content import CurriculumGradeOut, LessonProblemsOut
+from app.schemas.content import CurriculumGradeOut, LessonProblemsOut, LiteratureSourceOut
 
 router = APIRouter(prefix="/curriculum", tags=["content"])
 
@@ -13,8 +13,16 @@ router = APIRouter(prefix="/curriculum", tags=["content"])
 async def list_curriculum(
     subject: SubjectEnum = SubjectEnum.physics, session: AsyncSession = Depends(get_db)
 ) -> list[CurriculumGradeOut]:
-    """Программа по классам: класс → темы → подтемы. Сейчас заполнена только физика."""
+    """Программа по классам: класс → темы → подтемы, у подтем — ссылки на главы книг."""
     return await content_crud.list_curriculum(session, subject)
+
+
+@router.get("/literature", response_model=list[LiteratureSourceOut])
+async def list_literature(
+    subject: SubjectEnum = SubjectEnum.physics, session: AsyncSession = Depends(get_db)
+) -> list[LiteratureSourceOut]:
+    """Список литературы по предмету: книги и сайты, на которые ссылаются подтемы программы."""
+    return await content_crud.list_literature(session, subject)
 
 
 @router.get("/lessons/{lesson_id}/problems", response_model=LessonProblemsOut)

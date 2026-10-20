@@ -3,6 +3,7 @@ from app.models.content import (
     CurriculumLesson,
     CurriculumModule,
     LessonProblem,
+    LessonReference,
     Olympiad,
     OlympiadSubject,
     Plan,
@@ -36,6 +37,7 @@ __all__ = [
     "CurriculumLesson",
     "ProblemSource",
     "LessonProblem",
+    "LessonReference",
     "User",
     "TaskAttempt",
 ]

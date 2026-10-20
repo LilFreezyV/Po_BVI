@@ -16,6 +16,7 @@ from app.models.content import (
     CurriculumLesson,
     CurriculumModule,
     LessonProblem,
+    LessonReference,
     Olympiad,
     OlympiadSubject,
     Plan,
@@ -30,12 +31,16 @@ from app.models.content import (
     UniversityOlympiad,
 )
 from scripts.curriculum_data import CURRICULUM, iter_modules, lesson_id, module_id
+from scripts import literature_math
 from scripts import problems_savchenko_baldin as savchenko_baldin
 from scripts.seed_data import OLYMPIAD_TITLE_TO_ID, OLYMPIADS, PLANS, SECTIONS, TOPICS, UNIVERSITIES
 
 
-# Задачники: модуль с SOURCE и PROBLEMS. Картинки лежат во фронтенде: public/problems/<id>/{fig,ans}/<номер>.png
+# Задачники со свободной лицензией: модуль с SOURCE и PROBLEMS, тексты задач копируются.
+# Картинки лежат во фронтенде: public/problems/<id>/{fig,ans}/<номер>.png
 PROBLEM_BOOKS = [savchenko_baldin]
+# Списки литературы: модуль с SOURCES и REFERENCES — только ссылки на главы, без текстов.
+LITERATURE = [("math", literature_math)]
 PUBLIC_DIR = Path(__file__).resolve().parents[2] / "public"
 
 
@@ -72,6 +77,16 @@ def _assert_data_integrity() -> None:
             assert ref in lessons, f"{book.SOURCE['id']} {number}: нет подтемы {ref}"
             if "рисун" in text and "покажите" not in text.lower():
                 assert _asset(book.SOURCE["id"], "fig", number), f"{book.SOURCE['id']} {number}: нет файла рисунка"
+
+    for subject, lit in LITERATURE:
+        subject_lessons = {
+            (c["grade"], l[0]) for c in CURRICULUM if c["subject"] == subject for m in c["modules"] for l in m["lessons"]
+        }
+        source_ids = {s["id"] for s in lit.SOURCES}
+        for ref, items in lit.REFERENCES.items():
+            assert ref in subject_lessons, f"литература {subject}: нет подтемы {ref}"
+            for source_id, *_ in items:
+                assert source_id in source_ids, f"литература {subject} {ref}: нет источника {source_id!r}"
 
 
 async def seed() -> None:
@@ -215,6 +230,11 @@ async def seed() -> None:
                     year=src.get("year"),
                     license=src.get("license"),
                     license_url=src.get("license_url"),
+                    subject="physics",
+                    kind="book",
+                    category="Задачники",
+                    short_title=src.get("short_title"),
+                    position=0,
                 )
             )
             await session.flush()
@@ -236,6 +256,45 @@ async def seed() -> None:
                     )
                 )
 
+        # Литература и ссылки подтем на главы книг. Строки lesson_references тоже ушли каскадом
+        # вместе с подтемами — вставляем заново.
+        for subject, lit in LITERATURE:
+            for position, src in enumerate(lit.SOURCES):
+                await session.merge(
+                    ProblemSource(
+                        id=src["id"],
+                        subject=subject,
+                        kind=src["kind"],
+                        category=src["category"],
+                        position=position,
+                        title=src["title"],
+                        short_title=src["short_title"],
+                        authors=src["authors"],
+                        year=src["year"],
+                        url=src["url"],
+                        access_note=src["access_note"],
+                        annotation=src["annotation"],
+                        license=None,
+                        license_url=None,
+                    )
+                )
+            await session.flush()
+            for (grade, number), items in lit.REFERENCES.items():
+                lid = lesson_id(subject, grade, number)
+                for position, (source_id, locator, problems, page, solutions_page) in enumerate(items):
+                    session.add(
+                        LessonReference(
+                            id=f"{lid}-{position}",
+                            lesson_id=lid,
+                            source_id=source_id,
+                            position=position,
+                            locator=locator,
+                            problems=problems,
+                            page=page,
+                            solutions_page=solutions_page,
+                        )
+                    )
+
         await session.commit()
 
         topics_count = await session.scalar(select(func.count(Topic.id)))
@@ -245,11 +304,12 @@ async def seed() -> None:
         plans_count = await session.scalar(select(func.count(Plan.id)))
         lessons_count = await session.scalar(select(func.count(CurriculumLesson.id)))
         problems_count = await session.scalar(select(func.count(LessonProblem.id)))
+        references_count = await session.scalar(select(func.count(LessonReference.id)))
 
         print(
             f"Засеяно: {topics_count} тем, {tasks_count} задач, {olympiads_count} олимпиад, "
             f"{universities_count} вузов, {plans_count} тарифов, {lessons_count} подтем в программе, "
-            f"{problems_count} задач к подтемам"
+            f"{problems_count} задач к подтемам, {references_count} ссылок на литературу"
         )
 
 

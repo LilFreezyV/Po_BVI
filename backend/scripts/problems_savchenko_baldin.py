@@ -25,6 +25,7 @@ SOURCE = {
     "id": "savchenko-baldin",
     "title": "Сборник задач по физике",
     "authors": "Савченко О. Я., Балдин Е. М.",
+    "short_title": "Савченко, Балдин",
     "year": 2003,
     "license": "GNU FDL",
     "license_url": "https://www.gnu.org/licenses/fdl-1.3.ru.html",
