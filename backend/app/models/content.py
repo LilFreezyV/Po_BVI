@@ -177,10 +177,14 @@ class CurriculumLesson(Base):
     problems: Mapped[list["LessonProblem"]] = relationship(
         back_populates="lesson", order_by="LessonProblem.position", cascade="all, delete-orphan"
     )
+    references: Mapped[list["LessonReference"]] = relationship(
+        order_by="LessonReference.position", cascade="all, delete-orphan"
+    )
 
 
 class ProblemSource(Base):
-    """Задачник, из которого взяты задачи (для указания авторства и лицензии)."""
+    """Книга или сайт из списка литературы. Тексты задач копируются (LessonProblem) только
+    из источников со свободной лицензией; на остальные подтемы ссылаются (LessonReference)."""
 
     __tablename__ = "problem_sources"
 
@@ -190,6 +194,31 @@ class ProblemSource(Base):
     year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     license: Mapped[str | None] = mapped_column(String(64), nullable=True)
     license_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    subject: Mapped[SubjectEnum | None] = mapped_column(SubjectType, nullable=True)
+    short_title: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False, default="book")
+    category: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    access_note: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    annotation: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class LessonReference(Base):
+    """Ссылка подтемы на главу/параграф книги: без текста задач, только где их искать."""
+
+    __tablename__ = "lesson_references"
+
+    id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    lesson_id: Mapped[str] = mapped_column(
+        ForeignKey("curriculum_lessons.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    source_id: Mapped[str] = mapped_column(ForeignKey("problem_sources.id", ondelete="CASCADE"), nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    locator: Mapped[str] = mapped_column(String(255), nullable=False)
+    problems: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    page: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    solutions_page: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class LessonProblem(Base):

@@ -11,6 +11,7 @@ from app.models.content import (
     LessonProblem,
     Olympiad,
     Plan,
+    ProblemSource,
     Section,
     Topic,
     TopicOlympiad,
@@ -26,6 +27,8 @@ from app.schemas.content import (
     CurriculumModuleOut,
     LessonProblemOut,
     LessonProblemsOut,
+    LessonReferenceOut,
+    LiteratureSourceOut,
     OlympiadOut,
     OlympiadSummaryOut,
     PlanOut,
@@ -220,7 +223,7 @@ async def list_curriculum(session: AsyncSession, subject: SubjectEnum) -> list[C
     stmt = (
         select(CurriculumModule)
         .where(CurriculumModule.subject == subject)
-        .options(selectinload(CurriculumModule.lessons))
+        .options(selectinload(CurriculumModule.lessons).selectinload(CurriculumLesson.references))
         .order_by(CurriculumModule.grade, CurriculumModule.position)
     )
     modules = (await session.execute(stmt)).scalars().all()
@@ -247,12 +250,48 @@ async def list_curriculum(session: AsyncSession, subject: SubjectEnum) -> list[C
                         description=lesson.description,
                         topic_id=lesson.topic_id,
                         problem_count=counts.get(lesson.id, 0),
+                        references=[
+                            LessonReferenceOut(
+                                source_id=ref.source_id,
+                                locator=ref.locator,
+                                problems=ref.problems,
+                                page=ref.page,
+                                solutions_page=ref.solutions_page,
+                            )
+                            for ref in lesson.references
+                        ],
                     )
                     for lesson in module.lessons
                 ],
             )
         )
     return [CurriculumGradeOut(grade=grade, modules=items) for grade, items in grades.items()]
+
+
+async def list_literature(session: AsyncSession, subject: SubjectEnum) -> list[LiteratureSourceOut]:
+    stmt = (
+        select(ProblemSource)
+        .where(ProblemSource.subject == subject)
+        .order_by(ProblemSource.position, ProblemSource.title)
+    )
+    sources = (await session.execute(stmt)).scalars().all()
+    return [
+        LiteratureSourceOut(
+            id=s.id,
+            kind=s.kind,
+            category=s.category,
+            title=s.title,
+            short_title=s.short_title,
+            authors=s.authors,
+            year=s.year,
+            url=s.url,
+            access_note=s.access_note,
+            annotation=s.annotation,
+            license=s.license,
+            license_url=s.license_url,
+        )
+        for s in sources
+    ]
 
 
 async def get_lesson_problems(session: AsyncSession, lesson_id: str) -> LessonProblemsOut | None:

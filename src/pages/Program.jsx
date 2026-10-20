@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { listCurriculum, listLessonProblems, listTopics } from '../lib/api.js'
+import { listCurriculum, listLessonProblems, listLiterature, listTopics } from '../lib/api.js'
 import { useAsync } from '../lib/useAsync.js'
 import { Chip, Icon, Link } from '../components/ui.jsx'
 import MathText from '../components/MathText.jsx'
@@ -115,22 +115,163 @@ function LessonProblems({ lessonId }) {
 }
 
 const GRADE_KEY = 'bvi_program_grade'
+const SUBJECT_KEY = 'bvi_program_subject'
 
-function readSavedGrade() {
+const SUBJECTS = {
+  physics: {
+    title: 'Физика',
+    intro:
+      'Что проходим в каждом классе — по темам и подтемам, в порядке занятий. Если по подтеме уже есть конспект и задачи трёх уровней, рядом будет ссылка на них.',
+    placeholder: 'Поиск по подтемам: линзы, Кирхгоф…',
+  },
+  math: {
+    title: 'Математика',
+    intro:
+      'Черновик программы: темы и подтемы по классам, к каждой — где читать теорию и какие задачи решать в классических задачниках. Ссылки открывают нужную страницу официального PDF.',
+    placeholder: 'Поиск по подтемам: Виета, инверсия…',
+  },
+}
+
+function readSaved(key) {
   try {
-    const value = Number(localStorage.getItem(GRADE_KEY))
-    return Number.isInteger(value) && value > 0 ? value : null
+    return localStorage.getItem(key)
   } catch {
     return null
   }
 }
 
-function saveGrade(grade) {
+function save(key, value) {
   try {
-    localStorage.setItem(GRADE_KEY, String(grade))
+    localStorage.setItem(key, String(value))
   } catch {
     // localStorage недоступен — просто не запомним выбор
   }
+}
+
+function readSavedGrade() {
+  const value = Number(readSaved(GRADE_KEY))
+  return Number.isInteger(value) && value > 0 ? value : null
+}
+
+function readSavedSubject() {
+  const value = readSaved(SUBJECT_KEY)
+  return value in SUBJECTS ? value : 'physics'
+}
+
+const refsWord = (n) => {
+  const mod10 = n % 10
+  const mod100 = n % 100
+  if (mod10 === 1 && mod100 !== 11) return 'ссылка'
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'ссылки'
+  return 'ссылок'
+}
+
+const pdfPage = (url, page) => (url && page ? `${url}#page=${page}` : url)
+
+function ReferenceItem({ reference, source }) {
+  if (!source) return null
+  const href = pdfPage(source.url, reference.page)
+  const label = (
+    <>
+      <span className="font-semibold text-ink-700">{source.short_title || source.title}</span>
+      {': '}
+      {reference.locator}
+      {reference.problems && <span className="tabular-nums">, задачи {reference.problems}</span>}
+    </>
+  )
+  return (
+    <li className="flex gap-2 text-[13px] leading-relaxed text-ink-500">
+      <Icon name="book" className="mt-[3px] h-3.5 w-3.5 shrink-0 text-ink-300" />
+      <span className="min-w-0">
+        {href ? (
+          <a href={href} target="_blank" rel="noreferrer" className="hover:text-brand-800 hover:underline">
+            {label}
+          </a>
+        ) : (
+          label
+        )}
+        {source.url && reference.solutions_page && (
+          <>
+            {' · '}
+            <a
+              href={pdfPage(source.url, reference.solutions_page)}
+              target="_blank"
+              rel="noreferrer"
+              className="font-semibold text-brand-700 hover:text-brand-900"
+            >
+              решения
+            </a>
+          </>
+        )}
+      </span>
+    </li>
+  )
+}
+
+function Literature({ sources }) {
+  const groups = []
+  for (const s of sources) {
+    const key = s.category || 'Другое'
+    const group = groups.find((g) => g.title === key)
+    if (group) group.items.push(s)
+    else groups.push({ title: key, items: [s] })
+  }
+  return (
+    <section id="literature" className="scroll-mt-[240px] pt-12 lg:scroll-mt-[160px]">
+      <p className="eyebrow mb-3">Литература</p>
+      <h2 className="text-[24px] font-extrabold leading-tight sm:text-[28px]">Книги и сайты к программе</h2>
+      <p className="mt-3 max-w-3xl text-[15px] leading-relaxed text-ink-500">
+        Условия задач, рисунки и решения — в самих книгах: у подтем указано, какие параграфы и номера задач решать.
+        Бесплатные PDF открываются на сайтах издательства и авторов.
+      </p>
+      <div className="mt-6 grid gap-6 md:grid-cols-2">
+        {groups.map((g) => (
+          <div key={g.title}>
+            <h3 className="text-[12px] font-bold uppercase tracking-[0.12em] text-ink-400">{g.title}</h3>
+            <ul className="mt-3 space-y-3">
+              {g.items.map((s) => (
+                <li key={s.id} className="rounded-xl border border-line bg-white p-4">
+                  <p className="text-[15px] font-bold leading-snug">
+                    {s.url ? (
+                      <a href={s.url} target="_blank" rel="noreferrer" className="hover:text-brand-800 hover:underline">
+                        {s.title}
+                      </a>
+                    ) : (
+                      s.title
+                    )}
+                  </p>
+                  {s.authors && (
+                    <p className="mt-0.5 text-[13px] text-ink-500">
+                      {s.authors}
+                      {s.year ? `, ${s.year}` : ''}
+                    </p>
+                  )}
+                  {s.annotation && <p className="mt-2 text-[14px] leading-relaxed text-ink-700">{s.annotation}</p>}
+                  <p className="mt-2 text-[12px] text-ink-400">
+                    {s.license ? (
+                      <>
+                        Лицензия{' '}
+                        {s.license_url ? (
+                          <a href={s.license_url} target="_blank" rel="noreferrer" className="underline">
+                            {s.license}
+                          </a>
+                        ) : (
+                          s.license
+                        )}
+                        , задачи с ответами — прямо на сайте
+                      </>
+                    ) : (
+                      s.access_note
+                    )}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
 }
 
 const lessonsWord = (n) => {
@@ -149,7 +290,7 @@ const topicsWord = (n) => {
   return 'тем'
 }
 
-function LessonRow({ lesson, topicTitle }) {
+function LessonRow({ lesson, topicTitle, sources }) {
   const [open, setOpen] = useState(false)
   return (
     <li className="flex gap-4 border-t border-line px-5 py-4 first:border-t-0 sm:px-6">
@@ -159,6 +300,13 @@ function LessonRow({ lesson, topicTitle }) {
       <div className="min-w-0 flex-1">
         <h4 className="text-[15px] font-bold leading-snug">{lesson.title}</h4>
         <p className="mt-1 text-[14px] leading-relaxed text-ink-500">{lesson.description}</p>
+        {lesson.references?.length > 0 && (
+          <ul className="mt-2.5 space-y-1">
+            {lesson.references.map((ref, i) => (
+              <ReferenceItem key={i} reference={ref} source={sources[ref.source_id]} />
+            ))}
+          </ul>
+        )}
         {(lesson.problem_count > 0 || lesson.topic_id) && (
           <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-2">
             {lesson.problem_count > 0 && (
@@ -188,7 +336,7 @@ function LessonRow({ lesson, topicTitle }) {
   )
 }
 
-function ModuleCard({ module, index, open, onToggle, topicTitle, showRange }) {
+function ModuleCard({ module, index, open, onToggle, topicTitle, showRange, sources }) {
   const count = module.lessons.length
   const first = module.lessons[0]?.number
   const last = module.lessons[count - 1]?.number
@@ -217,7 +365,7 @@ function ModuleCard({ module, index, open, onToggle, topicTitle, showRange }) {
       {open && (
         <ol className="border-t border-line">
           {module.lessons.map((lesson) => (
-            <LessonRow key={lesson.id} lesson={lesson} topicTitle={topicTitle(lesson.topic_id)} />
+            <LessonRow key={lesson.id} lesson={lesson} topicTitle={topicTitle(lesson.topic_id)} sources={sources} />
           ))}
         </ol>
       )}
@@ -226,12 +374,24 @@ function ModuleCard({ module, index, open, onToggle, topicTitle, showRange }) {
 }
 
 export default function Program() {
-  const { data, loading, error } = useAsync(() => Promise.all([listCurriculum('physics'), listTopics()]), [])
-  const [curriculum, topics] = data || [[], []]
+  const [subject, setSubject] = useState(readSavedSubject)
+  const { data, loading, error } = useAsync(
+    () => Promise.all([listCurriculum(subject), listTopics(), listLiterature(subject)]),
+    [subject]
+  )
+  const [curriculum, topics, literature] = data || [[], [], []]
+  const sources = useMemo(() => Object.fromEntries(literature.map((s) => [s.id, s])), [literature])
+  const meta = SUBJECTS[subject]
 
   const [grade, setGrade] = useState(readSavedGrade)
   const [query, setQuery] = useState('')
   const [collapsed, setCollapsed] = useState({})
+
+  const selectSubject = (value) => {
+    setSubject(value)
+    setQuery('')
+    save(SUBJECT_KEY, value)
+  }
 
   // Если сохранённого класса нет в данных — берём первый доступный.
   useEffect(() => {
@@ -241,7 +401,7 @@ export default function Program() {
   const selectGrade = (value) => {
     setGrade(value)
     setQuery('')
-    saveGrade(value)
+    save(GRADE_KEY, value)
   }
 
   const topicTitle = (id) => (id ? topics.find((t) => t.id === id)?.title : null)
@@ -270,6 +430,7 @@ export default function Program() {
       lessons: lessons.length,
       withTasks: lessons.filter((l) => l.topic_id).length,
       problems: lessons.reduce((acc, l) => acc + (l.problem_count || 0), 0),
+      references: lessons.reduce((acc, l) => acc + (l.references?.length || 0), 0),
     }
   }, [current])
 
@@ -288,33 +449,45 @@ export default function Program() {
     <div className="container-x py-10 lg:py-14">
       <div className="max-w-3xl">
         <p className="eyebrow mb-3">Программа</p>
-        <h1 className="text-[32px] font-extrabold leading-tight sm:text-[42px]">Физика: программа по классам</h1>
-        <p className="mt-4 text-[17px] leading-relaxed text-ink-500">
-          Что проходим в каждом классе — по темам и подтемам, в порядке занятий. Если по подтеме уже есть конспект
-          и задачи трёх уровней, рядом будет ссылка на них.
-        </p>
+        <h1 className="text-[32px] font-extrabold leading-tight sm:text-[42px]">{meta.title}: программа по классам</h1>
+        <p className="mt-4 text-[17px] leading-relaxed text-ink-500">{meta.intro}</p>
       </div>
 
       <div className="sticky top-[68px] z-30 -mx-5 mt-8 border-b border-line bg-paper/90 px-5 py-4 backdrop-blur-md sm:-mx-8 sm:px-8">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="inline-flex self-start rounded-xl border border-line bg-white p-1">
-            {curriculum.map((g) => (
-              <button
-                key={g.grade}
-                onClick={() => selectGrade(g.grade)}
-                className={`rounded-lg px-4 py-2 text-[14px] font-semibold transition ${
-                  g.grade === grade ? 'bg-brand-700 text-white' : 'text-ink-500 hover:text-ink-900'
-                }`}
-              >
-                {g.grade} класс
-              </button>
-            ))}
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap gap-2">
+            <div className="inline-flex rounded-xl border border-line bg-white p-1">
+              {Object.entries(SUBJECTS).map(([id, s]) => (
+                <button
+                  key={id}
+                  onClick={() => selectSubject(id)}
+                  className={`rounded-lg px-4 py-2 text-[14px] font-semibold transition ${
+                    id === subject ? 'bg-ink-900 text-white' : 'text-ink-500 hover:text-ink-900'
+                  }`}
+                >
+                  {s.title}
+                </button>
+              ))}
+            </div>
+            <div className={`inline-flex rounded-xl border border-line bg-white p-1 ${curriculum.length ? '' : 'hidden'}`}>
+              {curriculum.map((g) => (
+                <button
+                  key={g.grade}
+                  onClick={() => selectGrade(g.grade)}
+                  className={`rounded-lg px-4 py-2 text-[14px] font-semibold transition ${
+                    g.grade === grade ? 'bg-brand-700 text-white' : 'text-ink-500 hover:text-ink-900'
+                  }`}
+                >
+                  {g.grade} класс
+                </button>
+              ))}
+            </div>
           </div>
 
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Поиск по подтемам: линзы, Кирхгоф…"
+            placeholder={meta.placeholder}
             className="w-full rounded-xl border border-line bg-white px-4 py-2.5 text-[15px] outline-none transition placeholder:text-ink-300 focus:border-brand-400 sm:w-72"
           />
         </div>
@@ -350,6 +523,15 @@ export default function Program() {
                   </li>
                 ))}
               </ol>
+              {literature.length > 0 && (
+                <button
+                  onClick={() => document.getElementById('literature')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="mt-3 flex w-full items-center gap-2 rounded-lg border-t border-line px-2.5 pb-2 pt-4 text-left text-[14px] font-semibold text-ink-700 transition hover:text-brand-800"
+                >
+                  <Icon name="book" className="h-4 w-4 text-ink-400" />
+                  Литература · {literature.length}
+                </button>
+              )}
             </div>
           </aside>
 
@@ -373,6 +555,13 @@ export default function Program() {
                       <Chip className="bg-clay-50 text-clay-600">
                         {stats.problems} {problemsWord(stats.problems)} из сборника
                       </Chip>
+                    )}
+                    {stats.references > 0 && (
+                      <button onClick={() => document.getElementById('literature')?.scrollIntoView({ behavior: 'smooth' })}>
+                        <Chip className="border border-line bg-white text-ink-700 hover:border-ink-300">
+                          {stats.references} {refsWord(stats.references)} на литературу
+                        </Chip>
+                      </button>
                     )}
                   </>
                 )}
@@ -401,12 +590,15 @@ export default function Program() {
                   onToggle={() => setCollapsed((c) => ({ ...c, [m.id]: !c[m.id] }))}
                   topicTitle={topicTitle}
                   showRange={!searching}
+                  sources={sources}
                 />
               ))}
             </div>
           </div>
         </div>
       )}
+
+      {!loading && !error && literature.length > 0 && <Literature sources={literature} />}
     </div>
   )
 }

@@ -101,6 +101,14 @@ class PlanOut(BaseModel):
     accent: bool
 
 
+class LessonReferenceOut(BaseModel):
+    source_id: str
+    locator: str
+    problems: str | None
+    page: int | None
+    solutions_page: int | None
+
+
 class CurriculumLessonOut(BaseModel):
     id: str
     number: int
@@ -108,6 +116,7 @@ class CurriculumLessonOut(BaseModel):
     description: str
     topic_id: str | None
     problem_count: int = 0
+    references: list[LessonReferenceOut] = []
 
 
 class CurriculumModuleOut(BaseModel):
@@ -126,6 +135,21 @@ class ProblemSourceOut(BaseModel):
     title: str
     authors: str
     year: int | None
+    license: str | None
+    license_url: str | None
+
+
+class LiteratureSourceOut(BaseModel):
+    id: str
+    kind: str
+    category: str | None
+    title: str
+    short_title: str | None
+    authors: str
+    year: int | None
+    url: str | None
+    access_note: str | None
+    annotation: str | None
     license: str | None
     license_url: str | None
 
