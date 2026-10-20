@@ -124,8 +124,12 @@ CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 Боевой сервер — VPS у sweb.ru (Ubuntu 24.04), поднят вручную 2026-10-10/12,
 автодеплой через GitHub Actions настроен 2026-10-15 (см. «Редеплой» ниже).
 
-- **Адрес:** `89.111.136.194` (поменялся один раз, см. ниже почему). Домена пока нет,
-  HTTPS пока нет — заходит только по `http://89.111.136.194/`.
+- **Адрес:** домен **`po-bvi.ru`** (куплен на sweb.ru там же, где VPS; A-записи `@` и `www` →
+  IP сервера, DNS — `ns1/ns2.spaceweb.ru`, `ns3/ns4.spaceweb.pro`) и IP `89.111.136.194`
+  (поменялся один раз, см. ниже почему). **HTTPS пока нет** — только `http://`.
+- **Фронтенд ходит в API по относительному пути `/api`** (переменная `VITE_API_URL=/api` в
+  GitHub), то есть на тот же адрес, с которого открыт сайт, — IP, домен или `www`. Поэтому
+  CORS на проде не участвует, а смена IP или домена не требует пересборки фронта.
 - **Код:** `/home/deploy/PO_BVI` на сервере (не `/root` — см. «Деплой-пользователь»
   ниже), из того же репозитория. Бэкенд в `/home/deploy/PO_BVI/backend/.venv`
   (отдельный venv от БД — на сервере своя локальная БД, не Neon, см. ниже).
@@ -147,7 +151,7 @@ CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 - **БД:** локальный Postgres на этом же сервере (не Neon!) — пользователь `bvi_user`,
   база `bvi`, слушает только `127.0.0.1:5432` (сознательный выбор — see «Доступ к БД
   только локально» ниже). `backend/.env` на сервере: `DATABASE_SSL=disable`,
-  `CORS_ORIGINS=http://89.111.136.194`.
+  `CORS_ORIGINS=http://89.111.136.194` (на проде роли не играет — запросы с того же адреса).
 - **Бэкенд запущен как systemd-сервис** `bvi-backend`
   (`/etc/systemd/system/bvi-backend.service`): `uvicorn app.main:app --host 127.0.0.1
   --port 8000`, `Restart=always`, `enable`d — переживает перезагрузку и падения.
@@ -159,6 +163,195 @@ CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 - **Доступ к БД только локально** — осознанное решение (а не экономия на настройке):
   Postgres на внешний мир не смотрит, только `bvi-backend` на том же сервере может
   к нему достучаться. Снаружи БД недоступна вообще никак.
+
+### Как выкатить изменения на прод — чек-лист на каждый раз
+
+Код на сервер попадает **только через GitHub**: Deploy собирает то, что лежит в `main` на
+GitHub, а не то, что у вас локально. Незапушенные изменения на прод не попадут, даже если
+Deploy прошёл зелёным (так уже было 2026-10-20).
+
+**1. Перед коммитом — проверить локально**
+- бэкенд: `cd backend && python -m pytest -q` (тесты ходят в ту же dev-базу, что и `.env`);
+- фронтенд: `npm run build` — сборка должна пройти без ошибок;
+- если менялась схема БД — сначала `python -m alembic upgrade head` на dev-базе, потом
+  `python -m scripts.seed`, если менялись данные (порядок важен: сид падает на
+  отсутствующих таблицах).
+
+**2. Закоммитить и запушить в `main`**: `git add <файлы>`, `git commit`, `git push`.
+Проверить, что пуш прошёл: `git status -sb` → `## main...origin/main` без `[ahead N]`.
+
+**3. Запустить Deploy**: GitHub → **Actions** → **Deploy** → **Run workflow** → ветка `main`
+(подробно — в разделе «Редеплой» ниже). Ждать зелёную галочку, ~1–2 минуты.
+
+**4. Сделать то, что Deploy сам не делает** — зависит от того, что менялось:
+
+| Что менялось | Что сделать после Deploy |
+| --- | --- |
+| Фронтенд (`src/`, `public/`, `index.html`, `tailwind.config.js`) | ничего |
+| Код бэкенда (`backend/app/`) | ничего — Deploy делает `git pull` и перезапускает сервис |
+| Зависимости (`backend/requirements.txt`, `package.json`) | ничего — Deploy ставит их сам |
+| Новая миграция (`backend/alembic/versions/`) | ничего — Deploy запускает `alembic upgrade head` |
+| **Контент** (`backend/scripts/*_data.py`, `curriculum_*.py`, `literature_math.py`, `problems_*.py`, даты в `OLYMPIAD_STAGES`) | **сид на сервере руками** (команда ниже) |
+| Настройки сервера (`backend/.env` на сервере — его нет в git) | поправить файл на сервере и `systemctl restart bvi-backend` |
+
+Сид на сервере (зайти по SSH под root и выполнить от имени `deploy`, чтобы файлы в его
+папке не стали принадлежать root):
+
+```
+sudo -u deploy bash -c 'cd /home/deploy/PO_BVI/backend && .venv/bin/python -m scripts.seed'
+```
+
+В конце сид печатает итог «Засеяно: … тем, … подтем в программе, … ссылок на литературу» —
+сверить числа с тем, что получилось локально. Сид безопасен для пользователей: таблицы
+`users`, `task_attempts`, `problem_attempts` он не трогает.
+
+**5. Проверить прод**
+- открыть `http://po-bvi.ru/` (именно http — HTTPS ещё нет) и сделать hard refresh
+  (Ctrl+Shift+R) — иначе браузер может показать старый закэшированный бандл;
+- `curl http://po-bvi.ru/api/subjects` → 200;
+- пройти руками то, что меняли.
+
+**6. Коллеге — подтянуть изменения локально**: `git pull`, затем на своей dev-базе
+`python -m alembic upgrade head` и `python -m scripts.seed`, если в коммите были миграции
+или контент. (Пока оба работаем с одной базой Neon, это достаточно сделать одному из нас.)
+
+### Как настроить деплой с нуля (новый сервер или переезд)
+
+Так поднимали текущий сервер 2026-10-10…15. Конфиги ниже — эталон того, что должно
+получиться; если чините существующий сервер, сначала сверьте их с файлами на нём.
+
+**1. Сервер.** VPS с Ubuntu 24.04, 2 vCPU / 2 ГБ RAM / 15 ГБ диска хватает с запасом (БД
+занимает единицы мегабайт). Зайти под root и поставить пакеты:
+
+```
+apt update && apt install -y git nginx postgresql python3-venv python3-pip
+```
+
+Проверить, что новый IP не в блок-листе РКН: открыть `http://<ip>/` извне после настройки
+nginx (см. «IP уже менялся» ниже — у первого IP была ровно эта проблема).
+
+**2. База.** Postgres слушает только `127.0.0.1` (так в Ubuntu по умолчанию — не открывать
+наружу):
+
+```
+sudo -u postgres psql -c "CREATE USER bvi_user WITH PASSWORD '<пароль>';"
+sudo -u postgres psql -c "CREATE DATABASE bvi OWNER bvi_user;"
+```
+
+**3. Пользователь `deploy`** — без пароля, вход только по ключу, `sudo` только на две команды:
+
+```
+adduser --disabled-password --gecos "" deploy
+chmod o+x /home/deploy          # иначе nginx (www-data) не прочитает статику → 500
+```
+
+Файл `/etc/sudoers.d/deploy` (редактировать через `visudo -f /etc/sudoers.d/deploy`,
+проверка — `visudo -c`):
+
+```
+deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart bvi-backend, /usr/bin/systemctl reload nginx
+```
+
+**4. Ключ для GitHub Actions → сервер.** На своём компьютере:
+`ssh-keygen -t ed25519 -f deploy_key -N ""`. Публичную часть (`deploy_key.pub`) положить
+на сервер в `/home/deploy/.ssh/authorized_keys` (владелец `deploy`, права `700` на `.ssh` и
+`600` на файл). Приватную — **в base64 одной строкой** (`base64 -w0 deploy_key`) в GitHub →
+Settings → Secrets and variables → Actions → **Secrets** → `DEPLOY_SSH_KEY_B64`. После этого
+локальные файлы ключа удалить.
+
+**5. Ключ сервер → GitHub (для `git pull`).** Под `deploy` на сервере:
+
+```
+ssh-keygen -t ed25519 -f ~/.ssh/github_deploy -N ""
+ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts
+printf 'Host github.com\n  IdentityFile ~/.ssh/github_deploy\n  IdentitiesOnly yes\n' >> ~/.ssh/config
+```
+
+`~/.ssh/github_deploy.pub` добавить в репозиторий: Settings → **Deploy keys** → Add (без
+права записи). Без `known_hosts` `git pull` падает с «Host key verification failed».
+
+**6. Код и бэкенд.** Под `deploy`, клонировать **по SSH** (HTTPS к GitHub из сети хостера
+не работает):
+
+```
+cd ~ && git clone git@github.com:LilFreezyV/Po_BVI.git PO_BVI
+cd PO_BVI/backend && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+mkdir -p ~/PO_BVI/releases
+```
+
+`backend/.env`:
+
+```
+DATABASE_URL=postgresql+asyncpg://bvi_user:<пароль>@127.0.0.1:5432/bvi
+DATABASE_SSL=disable
+JWT_SECRET=<длинная случайная строка, например из `openssl rand -hex 32`>
+CORS_ORIGINS=http://po-bvi.ru
+```
+
+Затем `.venv/bin/python -m alembic upgrade head` и `.venv/bin/python -m scripts.seed`.
+venv создавать прямо на месте — переносить готовый нельзя (см. «Деплой-пользователь» выше).
+
+**7. systemd** — `/etc/systemd/system/bvi-backend.service`:
+
+```
+[Unit]
+Description=BVI FastAPI backend
+After=network.target postgresql.service
+
+[Service]
+User=deploy
+WorkingDirectory=/home/deploy/PO_BVI/backend
+ExecStart=/home/deploy/PO_BVI/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+`systemctl daemon-reload && systemctl enable --now bvi-backend`, проверка —
+`curl http://127.0.0.1:8000/api/subjects`. Порт 8000 наружу не открывать.
+
+**8. nginx** — `/etc/nginx/sites-available/bvi`:
+
+```
+server {
+    listen 80;
+    server_name po-bvi.ru www.po-bvi.ru 89.111.136.194;
+
+    root /home/deploy/PO_BVI/current;
+    index index.html;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+`ln -s /etc/nginx/sites-available/bvi /etc/nginx/sites-enabled/`, удалить
+`sites-enabled/default`, `nginx -t && systemctl reload nginx`. `proxy_pass` — без `/` на
+конце: бэкенд сам ждёт префикс `/api`.
+
+**9. GitHub.** Settings → Secrets and variables → Actions:
+- **Secrets:** `DEPLOY_SSH_KEY_B64` (шаг 4);
+- **Variables:** `VITE_API_URL` = `/api` (во вкладке Variables, не Secrets);
+- в `.github/workflows/deploy.yml` поправить `DEPLOY_HOST` на адрес нового сервера и
+  запушить.
+
+**10. Первый деплой** — Actions → Deploy → Run workflow. Он соберёт фронт, создаст первый
+релиз и симлинк `current`. Проверка — `http://po-bvi.ru/` открывается, данные грузятся.
+
+**11. DNS** — в панели sweb.ru у домена A-записи `@` и `www` на IP сервера. Новый домен
+расходится по миру от часа до суток; проверить: `nslookup po-bvi.ru 8.8.8.8`.
+
+**Ещё не сделано:** HTTPS. Когда дойдут руки — `apt install certbot python3-certbot-nginx`,
+`certbot --nginx -d po-bvi.ru -d www.po-bvi.ru` (он сам допишет в конфиг nginx `listen 443`
+и редирект), после этого в `.env` поменять `CORS_ORIGINS` на `https://…`.
 
 ### Сеть хостера блокирует GitHub/npm — это не баг, а особенность окружения
 
@@ -204,10 +397,10 @@ HTTP-трафик рвался — `ERR_CONNECTION_RESET`), при этом вс
    `systemctl reload nginx`.
 4. `backend/.env` на сервере — `CORS_ORIGINS` на новый IP, `systemctl restart
    bvi-backend`.
-5. **GitHub → Settings → Secrets and variables → Actions → Variables** — поменять
-   `VITE_API_URL` на новый IP (`http://<новый-ip>/api`). Переменная зашивается в
-   JS-бандл на этапе сборки (build-time, не runtime), так что после смены нужен
-   новый прогон деплой-workflow — одной правки бэкенда недостаточно.
+5. **`VITE_API_URL` менять не нужно** — с 2026-10-19 там относительный `/api`. (Раньше там
+   был IP целиком, и после смены IP приходилось пересобирать фронт: переменная
+   зашивается в бандл на этапе сборки.) Зато надо поменять A-записи домена `po-bvi.ru` в
+   панели sweb.ru на новый IP.
 6. **GitHub → …→ Secrets** — если меняете и самого деплой-пользователя/ключ (не
    обязательно при простой смене IP) — `DEPLOY_SSH_KEY_B64`. И саму переменную
    `DEPLOY_HOST` в `.github/workflows/deploy.yml` (она захардкожена в файле, не в
@@ -422,8 +615,8 @@ nginx`, в конце health-check (curl на `/api/subjects` и `/`) — есл
 
 ## Что не сделано
 
-- **HTTPS** — нужен домен (на голый IP Let's Encrypt сертификат не выдаёт), домена
-  пока нет. Сайт сейчас только по `http://`.
+- **HTTPS** — домен `po-bvi.ru` уже есть и резолвится, осталось выпустить сертификат
+  (certbot, см. конец «Как настроить деплой с нуля»). Сайт сейчас только по `http://`.
 - ИИ-помощник — полностью мок на фронтенде, реального LLM-бэкенда нет.
 - Оплата/управление подпиской — `subscription_active` можно выставить только вручную в БД.
 - Редактирование профиля после регистрации (grade/goal/target задаются один раз при
