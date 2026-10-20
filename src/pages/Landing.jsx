@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { AUDIENCE, STEPS } from '../data/site.js'
 import { listOlympiads, listPlans, listSections, listTopics, listUniversities } from '../lib/api.js'
 import { useAsync } from '../lib/useAsync.js'
@@ -70,7 +70,7 @@ function MarkedWord({ children }) {
   )
 }
 
-function Hero({ stats }) {
+function Hero({ stats, olympiads }) {
   return (
     <section className="relative overflow-hidden">
       <FormulaTexture />
@@ -114,13 +114,13 @@ function Hero({ stats }) {
           </dl>
         </div>
 
-        <HeroCard />
+        <HeroCard olympiads={olympiads} />
       </div>
     </section>
   )
 }
 
-function HeroCard() {
+function HeroCard({ olympiads }) {
   return (
     <div className="flex flex-col">
       <div className="overflow-hidden rounded-lg border border-line bg-white shadow-lift">
@@ -171,14 +171,81 @@ function HeroCard() {
         </div>
       </div>
 
-      <div className="mt-4 flex w-full items-center gap-3 rounded-lg border border-line bg-white p-4 sm:w-auto sm:self-start">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-mark-50 text-mark-500">
-          <Icon name="target" />
-        </span>
-        <div>
-          <p className="text-[13px] font-bold leading-tight">До отбора Физтеха</p>
-          <p className="font-mono text-[13px] text-ink-400">74 дня · 9 тем в плане</p>
-        </div>
+      <PhystechCountdown olympiad={olympiads.find((o) => o.id === 'phystech')} />
+    </div>
+  )
+}
+
+const MSK = 'Europe/Moscow'
+const mskDay = new Intl.DateTimeFormat('en-CA', { timeZone: MSK, year: 'numeric', month: '2-digit', day: '2-digit' })
+const mskDate = new Intl.DateTimeFormat('ru-RU', { timeZone: MSK, day: 'numeric', month: 'long' })
+const mskTime = new Intl.DateTimeFormat('ru-RU', { timeZone: MSK, hour: 'numeric', minute: '2-digit' })
+
+const daysUntil = (now, date) => Math.round((Date.parse(mskDay.format(date)) - Date.parse(mskDay.format(now))) / 86400000)
+
+const daysWord = (n) => {
+  const mod10 = n % 10
+  const mod100 = n % 100
+  if (mod10 === 1 && mod100 !== 11) return 'день'
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'дня'
+  return 'дней'
+}
+
+function useNow(intervalMs = 60000) {
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), intervalMs)
+    return () => clearInterval(id)
+  }, [intervalMs])
+  return now
+}
+
+function nextStage(stages, subject, now) {
+  return stages
+    .filter((s) => s.subject === subject)
+    .map((s) => ({ ...s, date: new Date(s.starts_at) }))
+    .find((s) => s.date > now)
+}
+
+function PhystechCountdown({ olympiad }) {
+  const now = useNow()
+  if (!olympiad) return null
+  const rows = [
+    ['physics', 'Физика'],
+    ['math', 'Математика'],
+  ]
+    .map(([subject, label]) => ({ label, stage: nextStage(olympiad.stages || [], subject, now) }))
+    .filter((r) => r.stage)
+  if (rows.length === 0) return null
+
+  return (
+    <div className="mt-4 flex w-full gap-3 rounded-lg border border-line bg-white p-4 sm:w-auto sm:self-start">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-mark-50 text-mark-500">
+        <Icon name="target" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-[13px] font-bold leading-tight">Олимпиада «Физтех»</p>
+        <ul className="mt-2 space-y-2">
+          {rows.map(({ label, stage }) => {
+            const days = daysUntil(now, stage.date)
+            const when = days === 0 ? 'сегодня' : days === 1 ? 'завтра' : `через ${days} ${daysWord(days)}`
+            const time = mskTime.format(stage.date)
+            return (
+              <li key={label} className="text-[13px] leading-snug">
+                <p className="text-ink-700">
+                  <span className="font-semibold">{label}</span> · {stage.title.toLowerCase()}
+                  {stage.note && <span className="text-ink-400"> ({stage.note})</span>}
+                </p>
+                <p className="font-mono text-ink-400">
+                  <span className="text-mark-600">{when}</span>
+                  {' · '}
+                  {mskDate.format(stage.date)}
+                  {time !== '0:00' && time !== '00:00' ? `, ${time} МСК` : ''}
+                </p>
+              </li>
+            )
+          })}
+        </ul>
       </div>
     </div>
   )
@@ -463,7 +530,7 @@ export default function Landing() {
 
   return (
     <>
-      <Hero stats={stats} />
+      <Hero stats={stats} olympiads={olympiads} />
       <Audience />
       <HowItWorks />
       {!loading && <Bases olympiads={olympiads} universities={universities} />}

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from sqlalchemy import Boolean, ForeignKey, Integer, String, Text, UniqueConstraint
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -95,6 +97,24 @@ class Olympiad(Base):
     university_links: Mapped[list["UniversityOlympiad"]] = relationship(
         back_populates="olympiad", cascade="all, delete-orphan"
     )
+    stages: Mapped[list["OlympiadStage"]] = relationship(
+        order_by="OlympiadStage.starts_at", cascade="all, delete-orphan"
+    )
+
+
+class OlympiadStage(Base):
+    """Тур или этап олимпиады по предмету с точной датой — для обратного отсчёта на сайте."""
+
+    __tablename__ = "olympiad_stages"
+
+    id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    olympiad_id: Mapped[str] = mapped_column(
+        ForeignKey("olympiads.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    subject: Mapped[SubjectEnum] = mapped_column(SubjectType, nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    note: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
 
 class OlympiadSubject(Base):

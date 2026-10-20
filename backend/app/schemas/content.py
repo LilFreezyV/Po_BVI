@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 from app.schemas.common import TopicProgressOut
@@ -67,6 +69,13 @@ class TopicDetailOut(BaseModel):
     next_topic_id: str | None
 
 
+class OlympiadStageOut(BaseModel):
+    subject: str
+    title: str
+    starts_at: datetime
+    note: str | None
+
+
 class OlympiadOut(BaseModel):
     id: str
     title: str
@@ -77,6 +86,7 @@ class OlympiadOut(BaseModel):
     grades: str
     perk: str
     note: str
+    stages: list[OlympiadStageOut] = []
 
 
 class UniversityOut(BaseModel):
