@@ -18,7 +18,7 @@ from app.models.content import (
     University,
     UniversityOlympiad,
 )
-from app.models.progress import TaskAttempt
+from app.models.progress import ProblemAttempt, TaskAttempt
 from app.models.user import User
 
 __all__ = [
@@ -42,4 +42,5 @@ __all__ = [
     "LessonReference",
     "User",
     "TaskAttempt",
+    "ProblemAttempt",
 ]

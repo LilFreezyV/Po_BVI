@@ -1,15 +1,39 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, delete, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.content import Section, Task, Topic
+from app.models.content import (
+    CurriculumLesson,
+    CurriculumModule,
+    LessonProblem,
+    ProblemSource,
+    Section,
+    Task,
+    Topic,
+)
 from app.models.enums import LevelEnum
-from app.models.progress import TaskAttempt
+from app.models.progress import QUESTION, SOLVED, ProblemAttempt, TaskAttempt
 from app.schemas.common import TopicProgressOut
-from app.schemas.progress import ContinueItemOut, ProgressOverviewOut, SubjectSummaryOut, WeakSpotOut
+from app.schemas.progress import (
+    ContinueItemOut,
+    ProblemBookGradeOut,
+    ProblemBookModuleOut,
+    ProblemBookProgressOut,
+    ProgressOverviewOut,
+    QuestionItemOut,
+    SubjectSummaryOut,
+    WeakSpotOut,
+)
+
+LEVEL_TITLES = {"easy": "лёгкий", "medium": "средний", "hard": "сложный"}
+
+
+def _excerpt(text: str, limit: int = 140) -> str:
+    text = " ".join(text.split())
+    return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
 
 
 def _status_for(solved: int, total: int) -> str:
@@ -35,7 +59,7 @@ async def get_topic_progress_map(
                 and_(
                     TaskAttempt.task_id == Task.id,
                     TaskAttempt.user_id == user_id,
-                    TaskAttempt.solved.is_(True),
+                    TaskAttempt.status == SOLVED,
                 ),
             )
             .group_by(Task.topic_id)
@@ -65,7 +89,7 @@ async def get_topic_progress_for_topic(
                 .where(
                     Task.topic_id == topic_id,
                     TaskAttempt.user_id == user_id,
-                    TaskAttempt.solved.is_(True),
+                    TaskAttempt.status == SOLVED,
                 )
             )
             or 0
@@ -104,6 +128,7 @@ async def get_overview(session: AsyncSession, user_id: uuid.UUID | None) -> Prog
         new=sum(1 for p in values if p.status == "new"),
         solved_tasks=sum(p.solved for p in values),
         total_tasks=sum(p.total for p in values),
+        questions=await count_questions(session, user_id) if user_id is not None else 0,
     )
 
 
@@ -116,7 +141,7 @@ async def get_continue_list(
         return []
 
     last_attempt_stmt = (
-        select(Task.topic_id, func.max(TaskAttempt.solved_at))
+        select(Task.topic_id, func.max(TaskAttempt.updated_at))
         .join(TaskAttempt, TaskAttempt.task_id == Task.id)
         .where(TaskAttempt.user_id == user_id, Task.topic_id.in_(in_progress_ids))
         .group_by(Task.topic_id)
@@ -164,7 +189,7 @@ async def get_weak_spots(session: AsyncSession, user_id: uuid.UUID, limit: int =
             and_(
                 TaskAttempt.task_id == Task.id,
                 TaskAttempt.user_id == user_id,
-                TaskAttempt.solved.is_(True),
+                TaskAttempt.status == SOLVED,
             ),
         )
         .where(
@@ -194,21 +219,211 @@ async def get_weak_spots(session: AsyncSession, user_id: uuid.UUID, limit: int =
     return result
 
 
-async def record_attempt(
-    session: AsyncSession, user_id: uuid.UUID, task_id: str, solved: bool
+async def set_task_status(
+    session: AsyncSession, user_id: uuid.UUID, task_id: str, status: str | None
 ) -> Task | None:
+    """status=None снимает отметку."""
     task = await session.get(Task, task_id)
     if task is None:
         return None
-
-    stmt = (
-        pg_insert(TaskAttempt)
-        .values(id=uuid.uuid4(), user_id=user_id, task_id=task_id, solved=solved)
-        .on_conflict_do_update(
-            index_elements=[TaskAttempt.user_id, TaskAttempt.task_id],
-            set_={"solved": solved, "solved_at": func.now()},
+    if status is None:
+        await session.execute(
+            delete(TaskAttempt).where(TaskAttempt.user_id == user_id, TaskAttempt.task_id == task_id)
         )
-    )
-    await session.execute(stmt)
+    else:
+        await session.execute(
+            pg_insert(TaskAttempt)
+            .values(id=uuid.uuid4(), user_id=user_id, task_id=task_id, status=status)
+            .on_conflict_do_update(
+                index_elements=[TaskAttempt.user_id, TaskAttempt.task_id],
+                set_={"status": status, "updated_at": func.now()},
+            )
+        )
     await session.commit()
     return task
+
+
+async def set_problem_status(
+    session: AsyncSession, user_id: uuid.UUID, problem_id: str, status: str | None
+) -> bool:
+    if await session.get(LessonProblem, problem_id) is None:
+        return False
+    if status is None:
+        await session.execute(
+            delete(ProblemAttempt).where(ProblemAttempt.user_id == user_id, ProblemAttempt.problem_id == problem_id)
+        )
+    else:
+        await session.execute(
+            pg_insert(ProblemAttempt)
+            .values(id=uuid.uuid4(), user_id=user_id, problem_id=problem_id, status=status)
+            .on_conflict_do_update(
+                index_elements=[ProblemAttempt.user_id, ProblemAttempt.problem_id],
+                set_={"status": status, "updated_at": func.now()},
+            )
+        )
+    await session.commit()
+    return True
+
+
+async def task_statuses(session: AsyncSession, user_id: uuid.UUID | None, task_ids: list[str]) -> dict[str, str]:
+    if user_id is None or not task_ids:
+        return {}
+    rows = await session.execute(
+        select(TaskAttempt.task_id, TaskAttempt.status).where(
+            TaskAttempt.user_id == user_id, TaskAttempt.task_id.in_(task_ids)
+        )
+    )
+    return dict(rows.all())
+
+
+async def problem_statuses(
+    session: AsyncSession, user_id: uuid.UUID | None, problem_ids: list[str]
+) -> dict[str, str]:
+    if user_id is None or not problem_ids:
+        return {}
+    rows = await session.execute(
+        select(ProblemAttempt.problem_id, ProblemAttempt.status).where(
+            ProblemAttempt.user_id == user_id, ProblemAttempt.problem_id.in_(problem_ids)
+        )
+    )
+    return dict(rows.all())
+
+
+async def count_questions(session: AsyncSession, user_id: uuid.UUID) -> int:
+    tasks = await session.scalar(
+        select(func.count(TaskAttempt.id)).where(TaskAttempt.user_id == user_id, TaskAttempt.status == QUESTION)
+    )
+    problems = await session.scalar(
+        select(func.count(ProblemAttempt.id))
+        .join(LessonProblem, LessonProblem.id == ProblemAttempt.problem_id)
+        .where(ProblemAttempt.user_id == user_id, ProblemAttempt.status == QUESTION)
+    )
+    return (tasks or 0) + (problems or 0)
+
+
+async def list_questions(session: AsyncSession, user_id: uuid.UUID) -> list[QuestionItemOut]:
+    """Задачи тем и задачи из сборников с отметкой «есть вопросы», свежие сверху."""
+    items: list[tuple[datetime, QuestionItemOut]] = []
+
+    task_rows = await session.execute(
+        select(TaskAttempt.updated_at, Task, Topic.title)
+        .join(Task, Task.id == TaskAttempt.task_id)
+        .join(Topic, Topic.id == Task.topic_id)
+        .where(TaskAttempt.user_id == user_id, TaskAttempt.status == QUESTION)
+    )
+    for updated_at, task, topic_title in task_rows.all():
+        items.append(
+            (
+                updated_at,
+                QuestionItemOut(
+                    kind="task",
+                    id=task.id,
+                    title=topic_title,
+                    subtitle=f"{LEVEL_TITLES[task.level.value].capitalize()} уровень, задача {task.position + 1}",
+                    excerpt=_excerpt(task.text),
+                    topic_id=task.topic_id,
+                    lesson_id=None,
+                ),
+            )
+        )
+
+    problem_rows = await session.execute(
+        select(ProblemAttempt.updated_at, LessonProblem, func.coalesce(ProblemSource.short_title, ProblemSource.title), CurriculumLesson.title)
+        .join(LessonProblem, LessonProblem.id == ProblemAttempt.problem_id)
+        .join(ProblemSource, ProblemSource.id == LessonProblem.source_id)
+        .join(CurriculumLesson, CurriculumLesson.id == LessonProblem.lesson_id)
+        .where(ProblemAttempt.user_id == user_id, ProblemAttempt.status == QUESTION)
+    )
+    for updated_at, problem, source_title, lesson_title in problem_rows.all():
+        items.append(
+            (
+                updated_at,
+                QuestionItemOut(
+                    kind="problem",
+                    id=problem.id,
+                    title=f"{source_title}, №{problem.number}",
+                    subtitle=lesson_title,
+                    excerpt=_excerpt(problem.text),
+                    topic_id=None,
+                    lesson_id=problem.lesson_id,
+                ),
+            )
+        )
+
+    epoch = datetime.min.replace(tzinfo=timezone.utc)
+    items.sort(key=lambda pair: pair[0] or epoch, reverse=True)
+    return [item for _, item in items]
+
+
+def _group_problem_books(rows, statuses: dict[str, str]) -> list[ProblemBookProgressOut]:
+    books: dict[str, dict] = {}
+    for problem_id, source_id, source_title, subject, grade, module_id, module_title, position in rows:
+        book = books.setdefault(
+            source_id,
+            {"title": source_title, "subject": getattr(subject, "value", subject), "grades": {}},
+        )
+        grade_entry = book["grades"].setdefault(grade, {})
+        module = grade_entry.setdefault(
+            module_id, {"title": module_title, "position": position, "total": 0, "solved": 0, "questions": 0}
+        )
+        module["total"] += 1
+        status = statuses.get(problem_id)
+        if status == SOLVED:
+            module["solved"] += 1
+        elif status == QUESTION:
+            module["questions"] += 1
+
+    result = []
+    for source_id, book in books.items():
+        grades = []
+        for grade in sorted(book["grades"]):
+            modules = [
+                ProblemBookModuleOut(
+                    module_id=mid, title=m["title"], total=m["total"], solved=m["solved"], questions=m["questions"]
+                )
+                for mid, m in sorted(book["grades"][grade].items(), key=lambda kv: kv[1]["position"])
+            ]
+            grades.append(
+                ProblemBookGradeOut(
+                    grade=grade,
+                    total=sum(m.total for m in modules),
+                    solved=sum(m.solved for m in modules),
+                    questions=sum(m.questions for m in modules),
+                    modules=modules,
+                )
+            )
+        result.append(
+            ProblemBookProgressOut(
+                source_id=source_id,
+                title=book["title"],
+                subject=book["subject"],
+                total=sum(g.total for g in grades),
+                solved=sum(g.solved for g in grades),
+                questions=sum(g.questions for g in grades),
+                grades=grades,
+            )
+        )
+    return result
+
+
+async def get_problem_book_progress(session: AsyncSession, user_id: uuid.UUID) -> list[ProblemBookProgressOut]:
+    """Прогресс по задачам из сборников: сборник → класс → тема программы."""
+    rows = (
+        await session.execute(
+            select(
+                LessonProblem.id,
+                ProblemSource.id,
+                func.coalesce(ProblemSource.short_title, ProblemSource.title),
+                CurriculumModule.subject,
+                CurriculumModule.grade,
+                CurriculumModule.id,
+                CurriculumModule.title,
+                CurriculumModule.position,
+            )
+            .join(ProblemSource, ProblemSource.id == LessonProblem.source_id)
+            .join(CurriculumLesson, CurriculumLesson.id == LessonProblem.lesson_id)
+            .join(CurriculumModule, CurriculumModule.id == CurriculumLesson.module_id)
+        )
+    ).all()
+    statuses = await problem_statuses(session, user_id, [r[0] for r in rows])
+    return _group_problem_books(rows, statuses)

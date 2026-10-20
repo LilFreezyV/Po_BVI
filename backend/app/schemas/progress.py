@@ -1,6 +1,10 @@
+from typing import Literal
+
 from pydantic import BaseModel
 
 from app.schemas.common import TopicProgressOut
+
+AttemptStatus = Literal["solved", "question"]
 
 
 class TopicProgressItemOut(TopicProgressOut):
@@ -9,14 +13,24 @@ class TopicProgressItemOut(TopicProgressOut):
 
 class TaskAttemptIn(BaseModel):
     task_id: str
-    solved: bool = True
+    status: AttemptStatus | None
 
 
 class TaskAttemptResponseOut(BaseModel):
     task_id: str
-    solved: bool
+    status: AttemptStatus | None
     topic_id: str
     topic_progress: TopicProgressOut
+
+
+class ProblemAttemptIn(BaseModel):
+    problem_id: str
+    status: AttemptStatus | None
+
+
+class ProblemAttemptResponseOut(BaseModel):
+    problem_id: str
+    status: AttemptStatus | None
 
 
 class SubjectSummaryOut(BaseModel):
@@ -32,6 +46,7 @@ class ProgressOverviewOut(BaseModel):
     new: int
     solved_tasks: int
     total_tasks: int
+    questions: int = 0
 
 
 class ContinueItemOut(BaseModel):
@@ -46,3 +61,39 @@ class WeakSpotOut(BaseModel):
     topic_id: str
     title: str
     reason: str
+
+
+class QuestionItemOut(BaseModel):
+    kind: Literal["task", "problem"]
+    id: str
+    title: str
+    subtitle: str
+    excerpt: str
+    topic_id: str | None
+    lesson_id: str | None
+
+
+class ProblemBookModuleOut(BaseModel):
+    module_id: str
+    title: str
+    total: int
+    solved: int
+    questions: int
+
+
+class ProblemBookGradeOut(BaseModel):
+    grade: int
+    total: int
+    solved: int
+    questions: int
+    modules: list[ProblemBookModuleOut]
+
+
+class ProblemBookProgressOut(BaseModel):
+    source_id: str
+    title: str
+    subject: str
+    total: int
+    solved: int
+    questions: int
+    grades: list[ProblemBookGradeOut]

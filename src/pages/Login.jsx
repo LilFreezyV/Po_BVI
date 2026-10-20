@@ -19,7 +19,11 @@ function Field({ label, ...props }) {
   )
 }
 
-export default function Login() {
+// next — куда вернуть после входа; принимаем только внутренние пути сайта.
+const safeNext = (next) => (next && next.startsWith('/') && !next.startsWith('//') ? next : null)
+
+export default function Login({ next }) {
+  const returnTo = safeNext(next)
   const { login, register } = useAuth()
   const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
@@ -48,7 +52,7 @@ export default function Login() {
           target: target || null,
         })
       }
-      navigate('/progress')
+      navigate(returnTo || '/progress')
     } catch (err) {
       setError(err.detail || err.message || 'Что-то пошло не так')
     } finally {
@@ -81,6 +85,11 @@ export default function Login() {
           <h1 className="text-[22px] font-extrabold">
             {mode === 'login' ? 'С возвращением' : 'Создать аккаунт'}
           </h1>
+          {returnTo && (
+            <p className="-mt-2 text-[14px] leading-relaxed text-ink-500">
+              Чтобы отмечать задачи и сохранять прогресс, войдите или зарегистрируйтесь — потом вернём вас обратно.
+            </p>
+          )}
 
           <Field
             label="Email"

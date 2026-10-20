@@ -11,12 +11,13 @@ import Program from './pages/Program.jsx'
 
 function readHash() {
   const raw = window.location.hash.replace(/^#/, '') || '/'
-  const [path, anchor] = raw.split('#')
-  return { path: path || '/', anchor: anchor || '' }
+  const [pathWithQuery, anchor] = raw.split('#')
+  const [path, query] = (pathWithQuery || '/').split('?')
+  return { path: path || '/', anchor: anchor || '', query: new URLSearchParams(query || '') }
 }
 
 export default function App() {
-  const [{ path, anchor }, setLocation] = useState(readHash)
+  const [{ path, anchor, query }, setLocation] = useState(readHash)
 
   useEffect(() => {
     const onHashChange = () => setLocation(readHash())
@@ -45,9 +46,9 @@ export default function App() {
   } else if (path === '/base') {
     page = <Base />
   } else if (path === '/program') {
-    page = <Program />
+    page = <Program focusLesson={query.get('lesson')} />
   } else if (path === '/login') {
-    page = <Login />
+    page = <Login next={query.get('next')} />
   } else {
     page = <Landing />
   }

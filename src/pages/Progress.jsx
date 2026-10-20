@@ -4,6 +4,8 @@ import {
   listTopics,
   progressContinue,
   progressOverview,
+  progressProblemBooks,
+  progressQuestions,
   progressSubjects,
   progressWeakSpots,
 } from '../lib/api.js'
@@ -69,6 +71,106 @@ function TopicRow({ topic, sectionTitle }) {
   )
 }
 
+function QuestionsCard({ items }) {
+  return (
+    <div className="card p-5">
+      <div className="flex items-center gap-2.5">
+        <Icon name="spark" className="h-5 w-5 text-amber-600" />
+        <p className="text-[15px] font-bold">Есть вопросы</p>
+        {items.length > 0 && <Chip className="ml-auto bg-amber-50 text-amber-700">{items.length}</Chip>}
+      </div>
+      {items.length === 0 ? (
+        <p className="mt-4 text-[14px] leading-relaxed text-ink-400">
+          Отметьте задачу кнопкой «Есть вопросы» — она появится здесь, чтобы к ней вернуться.
+        </p>
+      ) : (
+        <ul className="mt-4 max-h-[420px] space-y-2.5 overflow-y-auto pr-1">
+          {items.map((q) => (
+            <li key={`${q.kind}-${q.id}`}>
+              <Link
+                to={q.kind === 'task' ? `/topic/${q.topic_id}` : `/program?lesson=${q.lesson_id}`}
+                className="block rounded-xl bg-paper p-3.5 transition hover:bg-amber-50"
+              >
+                <p className="text-[14px] font-semibold leading-snug">{q.title}</p>
+                <p className="mt-0.5 text-[12px] text-ink-400">{q.subtitle}</p>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-ink-500">{q.excerpt}</p>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function ProblemBookCard({ book }) {
+  const [open, setOpen] = useState({})
+  const percent = (solved, total) => (total ? Math.round((100 * solved) / total) : 0)
+  return (
+    <div className="card p-5 sm:p-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <p className="text-[17px] font-bold">{book.title}</p>
+          <p className="mt-0.5 text-[13px] text-ink-400">
+            Сборник задач · {SUBJECT_LABELS[book.subject] || book.subject}
+          </p>
+        </div>
+        <span className="text-[14px] tabular-nums text-ink-500">
+          решено {book.solved} из {book.total}
+          {book.questions > 0 && <span className="text-amber-700"> · вопросов {book.questions}</span>}
+        </span>
+      </div>
+      <div className="mt-3">
+        <ProgressBar value={percent(book.solved, book.total)} className="bg-brand-500" height="h-2" />
+      </div>
+
+      <ul className="mt-5 divide-y divide-line">
+        {book.grades.map((g) => (
+          <li key={g.grade} className="py-3">
+            <button
+              onClick={() => setOpen((o) => ({ ...o, [g.grade]: !o[g.grade] }))}
+              aria-expanded={!!open[g.grade]}
+              className="flex w-full items-center gap-4 text-left"
+            >
+              <span className="w-20 shrink-0 text-[14px] font-semibold">{g.grade} класс</span>
+              <span className="flex-1">
+                <ProgressBar value={percent(g.solved, g.total)} className="bg-brand-500" height="h-1.5" />
+              </span>
+              <span className="w-16 shrink-0 text-right text-[13px] tabular-nums text-ink-400">
+                {g.solved}/{g.total}
+              </span>
+              <Icon
+                name="chevronDown"
+                className={`h-4 w-4 shrink-0 text-ink-400 transition ${open[g.grade] ? 'rotate-180' : ''}`}
+              />
+            </button>
+            {open[g.grade] && (
+              <ul className="mt-3 space-y-2 pl-1">
+                {g.modules.map((m) => (
+                  <li key={m.module_id} className="flex items-center gap-4 text-[13px]">
+                    <span className="min-w-0 flex-1 truncate text-ink-700">{m.title}</span>
+                    {m.questions > 0 && <span className="shrink-0 text-amber-700">? {m.questions}</span>}
+                    <span className="w-14 shrink-0 text-right tabular-nums text-ink-400">
+                      {m.solved}/{m.total}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+        ))}
+      </ul>
+      <Link
+        to="/program"
+        className="mt-3 inline-flex items-center gap-2 text-[14px] font-semibold text-brand-700 hover:text-brand-900"
+      >
+        Открыть программу
+        <Icon name="arrow" className="h-4 w-4" />
+      </Link>
+    </div>
+  )
+}
+
 function LoginGate() {
   return (
     <div className="container-x py-16 lg:py-24">
@@ -101,6 +203,8 @@ function CabinetContent({ user }) {
         progressOverview(token),
         progressContinue(token),
         progressWeakSpots(token),
+        progressQuestions(token),
+        progressProblemBooks(token),
       ]),
     [token]
   )
@@ -119,7 +223,7 @@ function CabinetContent({ user }) {
     )
   }
 
-  const [topics, , subjects, overview, continueList, weakSpots] = data
+  const [topics, , subjects, overview, continueList, weakSpots, questions, problemBooks] = data
   const totalTopics = overview.done + overview.progress + overview.new
   const visible = topics.filter((t) => filter === 'all' || t.progress.status === filter)
   const physics = subjects.find((s) => s.subject === 'physics') || { percent: 0, done: 0, total: 0 }
@@ -209,10 +313,25 @@ function CabinetContent({ user }) {
             ))}
             {visible.length === 0 && <p className="py-10 text-center text-ink-400">В этой группе пока пусто.</p>}
           </div>
+
+          {problemBooks.length > 0 && (
+            <div className="mt-10">
+              <h2 className="text-[22px] font-extrabold">Задачи из сборников</h2>
+              <p className="mt-1.5 text-[15px] text-ink-500">
+                Отдельно от тем каталога: задачи сборников привязаны к программе по классам.
+              </p>
+              <div className="mt-5 space-y-4">
+                {problemBooks.map((b) => (
+                  <ProblemBookCard key={b.source_id} book={b} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Сайдбар */}
         <aside className="space-y-5">
+          <QuestionsCard items={questions} />
           <div className="card p-5">
             <div className="flex items-center gap-2.5">
               <Icon name="target" className="h-5 w-5 text-clay-500" />

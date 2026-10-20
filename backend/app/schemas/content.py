@@ -37,6 +37,7 @@ class TaskOut(BaseModel):
     hint: str | None
     solution: str | None
     locked: bool
+    status: str | None = None
 
 
 class TheoryOut(BaseModel):
@@ -171,6 +172,7 @@ class LessonProblemOut(BaseModel):
     text: str
     figure: str | None
     answer_image: str | None
+    status: str | None = None
 
 
 class LessonProblemsOut(BaseModel):

@@ -6,7 +6,11 @@ from app.database import get_db
 from app.models.user import User
 from app.schemas.progress import (
     ContinueItemOut,
+    ProblemAttemptIn,
+    ProblemAttemptResponseOut,
+    ProblemBookProgressOut,
     ProgressOverviewOut,
+    QuestionItemOut,
     SubjectSummaryOut,
     TaskAttemptIn,
     TaskAttemptResponseOut,
@@ -61,16 +65,44 @@ async def weak_spots(
     return await progress_crud.get_weak_spots(session, current_user.id, limit)
 
 
-@router.post("/attempts", response_model=TaskAttemptResponseOut, status_code=status.HTTP_201_CREATED)
-async def create_attempt(
+@router.get("/questions", response_model=list[QuestionItemOut])
+async def questions(
+    session: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
+) -> list[QuestionItemOut]:
+    return await progress_crud.list_questions(session, current_user.id)
+
+
+@router.get("/problem-books", response_model=list[ProblemBookProgressOut])
+async def problem_books(
+    session: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
+) -> list[ProblemBookProgressOut]:
+    return await progress_crud.get_problem_book_progress(session, current_user.id)
+
+
+@router.post("/attempts", response_model=TaskAttemptResponseOut)
+async def set_task_status(
     payload: TaskAttemptIn,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> TaskAttemptResponseOut:
-    task = await progress_crud.record_attempt(session, current_user.id, payload.task_id, payload.solved)
+    """Отметка у задачи темы: solved / question; status=null снимает отметку."""
+    task = await progress_crud.set_task_status(session, current_user.id, payload.task_id, payload.status)
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Задача не найдена")
     topic_progress = await progress_crud.get_topic_progress_for_topic(session, current_user.id, task.topic_id)
     return TaskAttemptResponseOut(
-        task_id=task.id, solved=payload.solved, topic_id=task.topic_id, topic_progress=topic_progress
+        task_id=task.id, status=payload.status, topic_id=task.topic_id, topic_progress=topic_progress
     )
+
+
+@router.post("/problem-attempts", response_model=ProblemAttemptResponseOut)
+async def set_problem_status(
+    payload: ProblemAttemptIn,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ProblemAttemptResponseOut:
+    """То же для задачи из сборника на странице программы."""
+    found = await progress_crud.set_problem_status(session, current_user.id, payload.problem_id, payload.status)
+    if not found:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Задача не найдена")
+    return ProblemAttemptResponseOut(problem_id=payload.problem_id, status=payload.status)

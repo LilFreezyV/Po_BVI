@@ -109,6 +109,7 @@ async def get_topic_detail(
     subscribed = bool(user and user.subscription_active)
     locked = not topic.free and not subscribed
 
+    statuses = await progress_crud.task_statuses(session, user_id, [t.id for t in topic.tasks])
     tasks_by_level: dict[str, list[TaskOut]] = {"easy": [], "medium": [], "hard": []}
     for task in sorted(topic.tasks, key=lambda t: (t.level.value, t.position)):
         level_locked = locked and task.level != LevelEnum.easy
@@ -121,6 +122,7 @@ async def get_topic_detail(
                 hint=None if level_locked else task.hint,
                 solution=None if level_locked else task.solution,
                 locked=level_locked,
+                status=None if level_locked else statuses.get(task.id),
             )
         )
 
@@ -303,7 +305,9 @@ async def list_literature(session: AsyncSession, subject: SubjectEnum) -> list[L
     ]
 
 
-async def get_lesson_problems(session: AsyncSession, lesson_id: str) -> LessonProblemsOut | None:
+async def get_lesson_problems(
+    session: AsyncSession, lesson_id: str, user_id: uuid.UUID | None = None
+) -> LessonProblemsOut | None:
     if await session.get(CurriculumLesson, lesson_id) is None:
         return None
     stmt = (
@@ -314,6 +318,7 @@ async def get_lesson_problems(session: AsyncSession, lesson_id: str) -> LessonPr
     )
     problems = (await session.execute(stmt)).scalars().all()
     sources = {p.source.id: p.source for p in problems}
+    statuses = await progress_crud.problem_statuses(session, user_id, [p.id for p in problems])
     return LessonProblemsOut(
         lesson_id=lesson_id,
         problems=[
@@ -324,6 +329,7 @@ async def get_lesson_problems(session: AsyncSession, lesson_id: str) -> LessonPr
                 text=p.text,
                 figure=p.figure,
                 answer_image=p.answer_image,
+                status=statuses.get(p.id),
             )
             for p in problems
         ],
