@@ -7,6 +7,7 @@
 Запуск: python -m scripts.seed
 """
 import asyncio
+from datetime import datetime
 from pathlib import Path
 
 from sqlalchemy import delete, func, select
@@ -18,6 +19,7 @@ from app.models.content import (
     LessonProblem,
     LessonReference,
     Olympiad,
+    OlympiadStage,
     OlympiadSubject,
     Plan,
     PlanFeature,
@@ -33,7 +35,15 @@ from app.models.content import (
 from scripts.curriculum_data import CURRICULUM, iter_modules, lesson_id, module_id
 from scripts import literature_math
 from scripts import problems_savchenko_baldin as savchenko_baldin
-from scripts.seed_data import OLYMPIAD_TITLE_TO_ID, OLYMPIADS, PLANS, SECTIONS, TOPICS, UNIVERSITIES
+from scripts.seed_data import (
+    OLYMPIAD_STAGES,
+    OLYMPIAD_TITLE_TO_ID,
+    OLYMPIADS,
+    PLANS,
+    SECTIONS,
+    TOPICS,
+    UNIVERSITIES,
+)
 
 
 # Задачники со свободной лицензией: модуль с SOURCE и PROBLEMS, тексты задач копируются.
@@ -115,6 +125,19 @@ async def seed() -> None:
             await session.execute(delete(OlympiadSubject).where(OlympiadSubject.olympiad_id == row["id"]))
             for subject in row["subjects"]:
                 session.add(OlympiadSubject(olympiad_id=row["id"], subject=subject))
+
+            await session.execute(delete(OlympiadStage).where(OlympiadStage.olympiad_id == row["id"]))
+            for position, (subject, title, starts_at, note) in enumerate(OLYMPIAD_STAGES.get(row["id"], [])):
+                session.add(
+                    OlympiadStage(
+                        id=f"{row['id']}-{subject}-{position}",
+                        olympiad_id=row["id"],
+                        subject=subject,
+                        title=title,
+                        starts_at=datetime.fromisoformat(starts_at),
+                        note=note,
+                    )
+                )
         await session.flush()
 
         for row in TOPICS:

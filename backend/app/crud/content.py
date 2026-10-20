@@ -30,6 +30,7 @@ from app.schemas.content import (
     LessonReferenceOut,
     LiteratureSourceOut,
     OlympiadOut,
+    OlympiadStageOut,
     OlympiadSummaryOut,
     PlanOut,
     ProblemSourceOut,
@@ -156,7 +157,11 @@ async def get_topic_detail(
 
 
 async def list_olympiads(session: AsyncSession) -> list[OlympiadOut]:
-    stmt = select(Olympiad).options(selectinload(Olympiad.subject_links)).order_by(Olympiad.id)
+    stmt = (
+        select(Olympiad)
+        .options(selectinload(Olympiad.subject_links), selectinload(Olympiad.stages))
+        .order_by(Olympiad.id)
+    )
     olympiads = (await session.execute(stmt)).scalars().all()
     return [
         OlympiadOut(
@@ -169,6 +174,10 @@ async def list_olympiads(session: AsyncSession) -> list[OlympiadOut]:
             grades=o.grades,
             perk=o.perk,
             note=o.note,
+            stages=[
+                OlympiadStageOut(subject=s.subject.value, title=s.title, starts_at=s.starts_at, note=s.note)
+                for s in o.stages
+            ],
         )
         for o in olympiads
     ]
