@@ -36,10 +36,13 @@ from app.models.content import (
     University,
     UniversityOlympiad,
 )
+from scripts.bvi_data import ARCHIVES as BVI_ARCHIVES
 from scripts.bvi_data import DATES as BVI_DATES
 from scripts.bvi_data import OLYMPIADS as BVI_OLYMPIADS
 from scripts.bvi_data import UNIVERSITIES as BVI_UNIVERSITIES
-from scripts.curriculum_data import CURRICULUM, iter_modules, lesson_id, module_id
+from scripts.curriculum_data import CURRICULUM
+from scripts.curriculum_topics import TOPICS as PHYSICS_TOPICS
+from scripts.curriculum_topics import auto_topics, parse_ref
 from scripts import literature_math
 from scripts import problems_savchenko_baldin as savchenko_baldin
 from scripts.seed_data import (
@@ -87,6 +90,21 @@ def _assert_data_integrity() -> None:
                 )
 
     lessons = {(c["grade"], l[0]) for c in CURRICULUM for m in c["modules"] for l in m["lessons"]}
+    for subject in sorted({c["subject"] for c in CURRICULUM}):
+        plan_refs = {
+            (c["grade"], l[0])
+            for c in CURRICULUM
+            if c["subject"] == subject
+            for m in c["modules"]
+            for l in m["lessons"]
+        }
+        topics = PHYSICS_TOPICS if subject == "physics" else auto_topics(subject, CURRICULUM)
+        used = [parse_ref(ref) for t in topics for _, refs in t["lessons"] for ref in refs]
+        assert len(used) == len(set(used)), f"{subject}: занятие плана разложено дважды"
+        assert set(used) == plan_refs, (
+            f"{subject}: не разложены {sorted(plan_refs - set(used))}, "
+            f"лишние {sorted(set(used) - plan_refs)}"
+        )
     for book in PROBLEM_BOOKS:
         numbers = [n for n, _, _ in book.PROBLEMS]
         assert len(numbers) == len(set(numbers)), f"{book.SOURCE['id']}: повторяются номера задач"
@@ -224,28 +242,48 @@ async def seed() -> None:
             for position, text in enumerate(row["features"]):
                 session.add(PlanFeature(plan_id=row["id"], position=position, text=text))
 
-        # Программа по классам. Строк-зависимостей у неё нет, поэтому проще всего
-        # пересобрать целиком: удалить модули предметов из данных (уроки уйдут каскадом)
-        # и вставить заново — так корректно отрабатывают и переименования, и удаления.
+        # Программа одним списком: крупная тема → подтемы в порядке прохождения, классы —
+        # пометкой у подтемы. Раскладка физики ручная (curriculum_topics.TOPICS: одна и та же
+        # подтема из разных классов склеена в одну строку), у математики — автоматическая по
+        # темам плана. Строк-зависимостей нет, поэтому пересобираем целиком: удаляем темы
+        # (подтемы, задачи и ссылки на литературу уйдут каскадом) и вставляем заново.
+        plan = {
+            (course["subject"], course["grade"], number): (title, description, topic_id)
+            for course in CURRICULUM
+            for module in course["modules"]
+            for number, title, description, topic_id in module["lessons"]
+        }
+        # (предмет, класс, занятие плана) → id подтемы: по нему привязываются задачи и
+        # литература. Предмет в ключе обязателен — номера занятий у физики и математики свои.
+        ref_to_lesson: dict[tuple[str, int, int], str] = {}
+
         subjects = {course["subject"] for course in CURRICULUM}
         await session.execute(delete(CurriculumModule).where(CurriculumModule.subject.in_(subjects)))
         await session.flush()
-        for subject, grade, position, module in iter_modules():
-            mid = module_id(subject, grade, module["slug"])
-            session.add(
-                CurriculumModule(id=mid, subject=subject, grade=grade, position=position, title=module["title"])
-            )
-            for number, title, description, topic_id in module["lessons"]:
+        for subject in sorted(subjects):
+            topics = PHYSICS_TOPICS if subject == "physics" else auto_topics(subject, CURRICULUM)
+            for position, topic in enumerate(topics):
+                mid = f"{subject}-{topic['slug']}"
                 session.add(
-                    CurriculumLesson(
-                        id=lesson_id(subject, grade, number),
-                        module_id=mid,
-                        number=number,
-                        title=title,
-                        description=description,
-                        topic_id=topic_id,
-                    )
+                    CurriculumModule(id=mid, subject=subject, position=position, title=topic["title"])
                 )
+                for number, (title_override, refs) in enumerate(topic["lessons"], start=1):
+                    keys = [(subject, *parse_ref(ref)) for ref in refs]
+                    first_title, first_description, _ = plan[keys[0]]
+                    lid = f"{mid}-{number:02d}"
+                    for key in keys:
+                        ref_to_lesson[key] = lid
+                    session.add(
+                        CurriculumLesson(
+                            id=lid,
+                            module_id=mid,
+                            number=number,
+                            title=title_override or first_title,
+                            description=first_description,
+                            grades=",".join(str(g) for g in sorted({g for _, g, _ in keys})),
+                            topic_id=next((plan[k][2] for k in keys if plan[k][2]), None),
+                        )
+                    )
 
         # Задачи из задачников к подтемам. Строки lesson_problems удалились каскадом вместе с
         # подтемами выше — вставляем заново.
@@ -271,7 +309,7 @@ async def seed() -> None:
             await session.execute(delete(LessonProblem).where(LessonProblem.source_id == src["id"]))
             per_lesson: dict[str, int] = {}
             for number, (grade, lesson_number), text in book.PROBLEMS:
-                lid = lesson_id("physics", grade, lesson_number)
+                lid = ref_to_lesson[("physics", grade, lesson_number)]
                 per_lesson[lid] = per_lesson.get(lid, 0) + 1
                 session.add(
                     LessonProblem(
@@ -309,9 +347,14 @@ async def seed() -> None:
                     )
                 )
             await session.flush()
+            # Подтема может быть склеена из нескольких занятий плана, поэтому позицию
+            # ссылки считаем сквозной по подтеме — иначе id начнут повторяться.
+            per_lesson: dict[str, int] = {}
             for (grade, number), items in lit.REFERENCES.items():
-                lid = lesson_id(subject, grade, number)
-                for position, (source_id, locator, problems, page, solutions_page) in enumerate(items):
+                lid = ref_to_lesson[(subject, grade, number)]
+                for source_id, locator, problems, page, solutions_page in items:
+                    position = per_lesson.get(lid, 0)
+                    per_lesson[lid] = position + 1
                     session.add(
                         LessonReference(
                             id=f"{lid}-{position}",
@@ -337,9 +380,17 @@ async def seed() -> None:
         known_universities = {u["id"] for u in BVI_UNIVERSITIES}
         for position, uni in enumerate(BVI_UNIVERSITIES, start=1):
             session.add(BviUniversity(position=position, **uni))
+        assert set(BVI_ARCHIVES) <= {o["id"] for o in BVI_OLYMPIADS}, "архив ссылается на неизвестную олимпиаду"
         for olympiad in BVI_OLYMPIADS:
             data = {k: v for k, v in olympiad.items() if k != "benefits"}
-            session.add(BviOlympiad(**data))
+            archive = BVI_ARCHIVES.get(olympiad["id"])
+            session.add(
+                BviOlympiad(
+                    **data,
+                    archive_url=archive[0] if archive else None,
+                    archive_note=archive[1] if archive else None,
+                )
+            )
             for university_id, (winner, prize) in olympiad["benefits"].items():
                 if university_id not in known_universities:
                     raise AssertionError(

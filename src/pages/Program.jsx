@@ -132,20 +132,24 @@ function LessonProblems({ lessonId }) {
   )
 }
 
-const GRADE_KEY = 'bvi_program_grade'
+// «9, 10 класс» — подпись у темы и подтемы вместо прежнего деления на классы.
+function gradesLabel(grades) {
+  if (!grades || grades.length === 0) return null
+  return `${grades.join(', ')} класс`
+}
 const SUBJECT_KEY = 'bvi_program_subject'
 
 const SUBJECTS = {
   physics: {
     title: 'Физика',
     intro:
-      'Что проходим в каждом классе — по темам и подтемам, в порядке занятий. Если по подтеме уже есть конспект и задачи трёх уровней, рядом будет ссылка на них.',
+      'Весь курс одним списком, в порядке прохождения: крупная тема — подтемы внутри. В скобках классы, где тема встречается. Если по подтеме уже есть конспект и задачи трёх уровней, рядом будет ссылка на них.',
     placeholder: 'Поиск по подтемам: линзы, Кирхгоф…',
   },
   math: {
     title: 'Математика',
     intro:
-      'Черновик программы: темы и подтемы по классам, к каждой — где читать теорию и какие задачи решать в классических задачниках. Ссылки открывают нужную страницу официального PDF.',
+      'Черновик программы одним списком: к каждой подтеме — где читать теорию и какие задачи решать в классических задачниках. Ссылки открывают нужную страницу официального PDF.',
     placeholder: 'Поиск по подтемам: Виета, инверсия…',
   },
 }
@@ -166,10 +170,6 @@ function save(key, value) {
   }
 }
 
-function readSavedGrade() {
-  const value = Number(readSaved(GRADE_KEY))
-  return Number.isInteger(value) && value > 0 ? value : null
-}
 
 function readSavedSubject() {
   const value = readSaved(SUBJECT_KEY)
@@ -324,7 +324,14 @@ function LessonRow({ lesson, topicTitle, sources, focused }) {
         {lesson.number}
       </span>
       <div className="min-w-0 flex-1">
-        <h4 className="text-[15px] font-bold leading-snug">{lesson.title}</h4>
+        <h4 className="text-[15px] font-bold leading-snug">
+          {lesson.title}
+          {gradesLabel(lesson.grades) && (
+            <span className="ml-2 font-mono text-[12px] font-normal text-ink-300">
+              {gradesLabel(lesson.grades)}
+            </span>
+          )}
+        </h4>
         <p className="mt-1 text-[14px] leading-relaxed text-ink-500">{lesson.description}</p>
         {lesson.references?.length > 0 && (
           <ul className="mt-2.5 space-y-1">
@@ -362,10 +369,8 @@ function LessonRow({ lesson, topicTitle, sources, focused }) {
   )
 }
 
-function ModuleCard({ module, index, open, onToggle, topicTitle, showRange, sources, focusLesson }) {
+function ModuleCard({ module, index, open, onToggle, topicTitle, sources, focusLesson }) {
   const count = module.lessons.length
-  const first = module.lessons[0]?.number
-  const last = module.lessons[count - 1]?.number
 
   return (
     <section id={module.id} className="card scroll-mt-[150px] overflow-hidden">
@@ -379,7 +384,7 @@ function ModuleCard({ module, index, open, onToggle, topicTitle, showRange, sour
           <h3 className="mt-1 text-[18px] font-extrabold leading-snug sm:text-[20px]">{module.title}</h3>
           <p className="mt-1 text-[13px] text-ink-400">
             {count} {lessonsWord(count)}
-            {showRange && first !== undefined && first !== last ? ` · занятия ${first}–${last}` : ''}
+            {gradesLabel(module.grades) ? ` · ${gradesLabel(module.grades)}` : ''}
           </p>
         </div>
         <Icon
@@ -405,10 +410,10 @@ function ModuleCard({ module, index, open, onToggle, topicTitle, showRange, sour
   )
 }
 
-// id подтемы вида «physics-9-05» → предмет и класс.
+// id подтемы вида «physics-kinematics-12» → предмет (класса в адресе больше нет).
 function parseLessonId(id) {
-  const m = /^(physics|math)-(\d+)-\d+$/.exec(id || '')
-  return m ? { subject: m[1], grade: Number(m[2]) } : null
+  const m = /^(physics|math)-/.exec(id || '')
+  return m ? { subject: m[1] } : null
 }
 
 export default function Program({ focusLesson = null }) {
@@ -422,21 +427,19 @@ export default function Program({ focusLesson = null }) {
   const sources = useMemo(() => Object.fromEntries(literature.map((s) => [s.id, s])), [literature])
   const meta = SUBJECTS[subject]
 
-  const [grade, setGrade] = useState(() => focus?.grade || readSavedGrade())
   const [query, setQuery] = useState('')
   const [collapsed, setCollapsed] = useState({})
 
   useEffect(() => {
     if (!focus) return
     setSubject(focus.subject)
-    setGrade(focus.grade)
     setQuery('')
   }, [focusLesson]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!focusLesson || loading) return
     requestAnimationFrame(() => document.getElementById(focusLesson)?.scrollIntoView({ block: 'start' }))
-  }, [focusLesson, loading, grade])
+  }, [focusLesson, loading])
 
   const selectSubject = (value) => {
     setSubject(value)
@@ -444,26 +447,12 @@ export default function Program({ focusLesson = null }) {
     save(SUBJECT_KEY, value)
   }
 
-  // Если сохранённого класса нет в данных — берём первый доступный.
-  useEffect(() => {
-    if (curriculum.length && !curriculum.some((g) => g.grade === grade)) setGrade(curriculum[0].grade)
-  }, [curriculum, grade])
-
-  const selectGrade = (value) => {
-    setGrade(value)
-    setQuery('')
-    save(GRADE_KEY, value)
-  }
-
   const topicTitle = (id) => (id ? topics.find((t) => t.id === id)?.title : null)
 
-  const current = curriculum.find((g) => g.grade === grade)
-
   const modules = useMemo(() => {
-    if (!current) return []
     const q = query.trim().toLowerCase()
-    if (!q) return current.modules
-    return current.modules
+    if (!q) return curriculum
+    return curriculum
       .map((m) => ({
         ...m,
         lessons: m.lessons.filter(
@@ -471,19 +460,19 @@ export default function Program({ focusLesson = null }) {
         ),
       }))
       .filter((m) => m.lessons.length > 0)
-  }, [current, query])
+  }, [curriculum, query])
 
   const stats = useMemo(() => {
-    if (!current) return null
-    const lessons = current.modules.flatMap((m) => m.lessons)
+    if (!curriculum.length) return null
+    const lessons = curriculum.flatMap((m) => m.lessons)
     return {
-      modules: current.modules.length,
+      modules: curriculum.length,
       lessons: lessons.length,
       withTasks: lessons.filter((l) => l.topic_id).length,
       problems: lessons.reduce((acc, l) => acc + (l.problem_count || 0), 0),
       references: lessons.reduce((acc, l) => acc + (l.references?.length || 0), 0),
     }
-  }, [current])
+  }, [curriculum])
 
   const searching = query.trim().length > 0
   const shownLessons = modules.reduce((acc, m) => acc + m.lessons.length, 0)
@@ -501,7 +490,7 @@ export default function Program({ focusLesson = null }) {
       <div className="ruled-paper pointer-events-none absolute inset-x-0 top-0 h-56 -z-10" />
       <div className="max-w-3xl">
         <p className="eyebrow mb-3">Программа</p>
-        <h1 className="font-serif text-[32px] font-semibold leading-tight sm:text-[40px]">{meta.title}: программа по классам</h1>
+        <h1 className="font-serif text-[32px] font-semibold leading-tight sm:text-[40px]">{meta.title}: программа</h1>
         <p className="mt-4 text-[17px] leading-relaxed text-ink-500">{meta.intro}</p>
       </div>
 
@@ -518,19 +507,6 @@ export default function Program({ focusLesson = null }) {
                   }`}
                 >
                   {s.title}
-                </button>
-              ))}
-            </div>
-            <div className={`inline-flex rounded-xl border border-line bg-white p-1 ${curriculum.length ? '' : 'hidden'}`}>
-              {curriculum.map((g) => (
-                <button
-                  key={g.grade}
-                  onClick={() => selectGrade(g.grade)}
-                  className={`rounded-lg px-4 py-2 text-[14px] font-semibold transition ${
-                    g.grade === grade ? 'bg-pen-700 text-white' : 'text-ink-500 hover:text-ink-900'
-                  }`}
-                >
-                  {g.grade} класс
                 </button>
               ))}
             </div>
@@ -555,14 +531,16 @@ export default function Program({ focusLesson = null }) {
         </p>
       )}
 
-      {!loading && !error && current && (
+      {!loading && !error && curriculum.length > 0 && (
         <div className="grid gap-8 pt-8 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10">
           {/* Оглавление */}
           <aside className="hidden lg:block">
             <div className="sticky top-[160px]">
-              <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-ink-400">{grade} класс</p>
+              <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-ink-400">
+                Темы программы
+              </p>
               <ol className="mt-3 space-y-1">
-                {current.modules.map((m, i) => (
+                {curriculum.map((m, i) => (
                   <li key={m.id}>
                     <button
                       onClick={() => jumpTo(m.id)}
@@ -637,11 +615,10 @@ export default function Program({ focusLesson = null }) {
                 <ModuleCard
                   key={m.id}
                   module={m}
-                  index={current.modules.findIndex((x) => x.id === m.id)}
+                  index={curriculum.findIndex((x) => x.id === m.id)}
                   open={searching || !collapsed[m.id]}
                   onToggle={() => setCollapsed((c) => ({ ...c, [m.id]: !c[m.id] }))}
                   topicTitle={topicTitle}
-                  showRange={!searching}
                   sources={sources}
                   focusLesson={focusLesson}
                 />

@@ -134,6 +134,41 @@ UNIVERSITIES = [
     },
 ]
 
+# Архив заданий прошлых лет: официальная страница олимпиады, где лежат условия и разборы.
+# Собрано обходом сайтов олимпиад 21 октября 2026; note — как раздел называется у них.
+# Чужие тексты заданий мы не копируем, только ведём на первоисточник (см. CLAUDE.md).
+# Олимпиады, которых здесь нет, своего раздела с заданиями на сайте не держат или он
+# не открылся — в карточке тогда будет ссылка на сам сайт.
+ARCHIVES = {
+    "fizteh": ("https://olymp-online.mipt.ru/page/primery-zadanij", "Примеры заданий"),
+    "rosatom": ("https://olymp.mephi.ru/rosatom/about/traning/task_of_previous_years", "Задания прошлых лет"),
+    "inzhenernaya": (
+        "https://olymp.mephi.ru/engineering/about/traning/task_of_previous_years",
+        "Задания прошлых лет",
+    ),
+    "mosh": ("https://mosphys.olimpiada.ru/tasks", "Задания и разборы"),
+    "lomonosov": (
+        "https://olymp.msu.ru/rus/page/main/29/page/zadaniya-olimpiady-proshlyh-let",
+        "Задания олимпиад прошлых лет",
+    ),
+    "pvg": ("https://pvg.mk.ru/archive/archive/", "Архив олимпиады"),
+    "turnir-lomonosova": ("https://olimpiada.ru/activity/4/tasks", "Задания и решения"),
+    "vsesibirskaya": ("https://vsesib.nsu.ru/zadaniya-proshlyh-let/", "Задания прошлых лет"),
+    "kurchatov": ("https://olimpiadakurchatov.ru/tasks", "Задания прошлых лет"),
+    "spbgu-olymp": ("https://olympiada.spbu.ru/arkhiv.html", "Архив олимпиады"),
+    "shag-v-buduschee": ("https://olymp.bmstu.ru/ru/variants", "Задания и критерии оценивания"),
+    "kfu": ("https://malun.kpfu.ru/mpoarh", "Архив заданий и решений"),
+    "nto": ("https://ntcontest.ru/study/problembooks/", "Задачники прошлых лет"),
+    "bibn": ("http://www.unn.ru/archive", "Архив олимпиады"),
+    "nadezhda-energetiki": ("https://www.energy-hope.ru/olymp/tasks.html", "Материалы заданий прошлых лет"),
+    "omfo": ("https://omfo.ru/", "Сайт олимпиады с заданиями"),
+    "umov": ("https://umov.phys.msu.ru/#archive", "Задания прошлых лет"),
+    "izumrud": ("https://dovuz.urfu.ru/olymps/izumrud/tasks", "Задания и решения прошлых лет"),
+    "spb-astro": ("http://school.astro.spbu.ru/index.php?n=Main.Zadachi", "Задачи олимпиады"),
+    "buduschee-sibiri": ("https://olymp-sibir.nstu.ru/", "Задания — в разделе на главной"),
+    "put-v-nauku": ("https://olymphysics.nsu.ru/", "Материалы и примеры заданий"),
+}
+
 # Олимпиады в порядке сводной таблицы: уровень по перечню 2026/27, даты сезона
 # и ячейки «победитель / призёр» по каждому вузу-столбцу.
 OLYMPIADS = [

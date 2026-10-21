@@ -125,6 +125,8 @@ class CurriculumLessonOut(BaseModel):
     number: int
     title: str
     description: str
+    # Классы, в которых встречается подтема: «Вязкое трение (9, 10, 11 класс)».
+    grades: list[int]
     topic_id: str | None
     problem_count: int = 0
     references: list[LessonReferenceOut] = []
@@ -133,12 +135,9 @@ class CurriculumLessonOut(BaseModel):
 class CurriculumModuleOut(BaseModel):
     id: str
     title: str
+    # Объединение классов подтем — чтобы подписать тему целиком.
+    grades: list[int]
     lessons: list[CurriculumLessonOut]
-
-
-class CurriculumGradeOut(BaseModel):
-    grade: int
-    modules: list[CurriculumModuleOut]
 
 
 class ProblemSourceOut(BaseModel):

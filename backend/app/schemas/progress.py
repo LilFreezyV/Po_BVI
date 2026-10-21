@@ -81,14 +81,6 @@ class ProblemBookModuleOut(BaseModel):
     questions: int
 
 
-class ProblemBookGradeOut(BaseModel):
-    grade: int
-    total: int
-    solved: int
-    questions: int
-    modules: list[ProblemBookModuleOut]
-
-
 class ProblemBookProgressOut(BaseModel):
     source_id: str
     title: str
@@ -96,4 +88,4 @@ class ProblemBookProgressOut(BaseModel):
     total: int
     solved: int
     questions: int
-    grades: list[ProblemBookGradeOut]
+    modules: list[ProblemBookModuleOut]

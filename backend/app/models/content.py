@@ -163,14 +163,14 @@ class UniversityOlympiad(Base):
 
 
 class CurriculumModule(Base):
-    """Тема учебной программы класса (например, «Кинематика. Повторение» в 9 классе)."""
+    """Крупная тема программы («Кинематика»). Без деления на классы: классы темы —
+    объединение классов её подтем, см. CurriculumLesson.grades."""
 
     __tablename__ = "curriculum_modules"
-    __table_args__ = (UniqueConstraint("subject", "grade", "position"),)
+    __table_args__ = (UniqueConstraint("subject", "position"),)
 
     id: Mapped[str] = mapped_column(String(96), primary_key=True)
     subject: Mapped[SubjectEnum] = mapped_column(SubjectType, nullable=False)
-    grade: Mapped[int] = mapped_column(Integer, nullable=False)
     position: Mapped[int] = mapped_column(Integer, nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
 
@@ -192,6 +192,8 @@ class CurriculumLesson(Base):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     topic_id: Mapped[str | None] = mapped_column(ForeignKey("topics.id", ondelete="SET NULL"), nullable=True)
+    # Классы, в которых встречается подтема, через запятую: «9,11».
+    grades: Mapped[str] = mapped_column(String(32), nullable=False, default="")
 
     module: Mapped["CurriculumModule"] = relationship(back_populates="lessons")
     problems: Mapped[list["LessonProblem"]] = relationship(
@@ -330,6 +332,9 @@ class BviOlympiad(Base):
     site_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     reg_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     chat_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # Раздел с заданиями прошлых лет на сайте олимпиады: адрес и как он там назван.
+    archive_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    archive_note: Mapped[str | None] = mapped_column(String(255), nullable=True)
     catalog_id: Mapped[str | None] = mapped_column(
         ForeignKey("olympiads.id", ondelete="SET NULL"), nullable=True
     )
