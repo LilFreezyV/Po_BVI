@@ -51,7 +51,8 @@ async def get_bvi(session: AsyncSession, today: date | None = None) -> BviOut:
                 id=o.id, title=o.title, level=o.level, organizer=o.organizer,
                 grades=o.grades, status=o.status, registration=o.registration,
                 selection=o.selection, final=o.final, site_url=o.site_url,
-                reg_url=o.reg_url, chat_url=o.chat_url, catalog_id=o.catalog_id,
+                reg_url=o.reg_url, chat_url=o.chat_url, archive_url=o.archive_url,
+                archive_note=o.archive_note, catalog_id=o.catalog_id,
                 benefits=[
                     BviBenefitOut(university_id=b.university_id, winner=b.winner, prize=b.prize)
                     for b in o.benefits

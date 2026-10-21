@@ -104,7 +104,6 @@ function QuestionsCard({ items }) {
 }
 
 function ProblemBookCard({ book }) {
-  const [open, setOpen] = useState({})
   const percent = (solved, total) => (total ? Math.round((100 * solved) / total) : 0)
   return (
     <div className="card p-5 sm:p-6">
@@ -124,39 +123,18 @@ function ProblemBookCard({ book }) {
         <ProgressBar value={percent(book.solved, book.total)} className="bg-pen-500" height="h-2" />
       </div>
 
+      {/* Программа — один список тем, поэтому и прогресс по сборнику группируем по темам. */}
       <ul className="mt-5 divide-y divide-line">
-        {book.grades.map((g) => (
-          <li key={g.grade} className="py-3">
-            <button
-              onClick={() => setOpen((o) => ({ ...o, [g.grade]: !o[g.grade] }))}
-              aria-expanded={!!open[g.grade]}
-              className="flex w-full items-center gap-4 text-left"
-            >
-              <span className="w-20 shrink-0 text-[14px] font-semibold">{g.grade} класс</span>
-              <span className="flex-1">
-                <ProgressBar value={percent(g.solved, g.total)} className="bg-pen-500" height="h-1.5" />
-              </span>
-              <span className="w-16 shrink-0 text-right text-[13px] tabular-nums text-ink-400">
-                {g.solved}/{g.total}
-              </span>
-              <Icon
-                name="chevronDown"
-                className={`h-4 w-4 shrink-0 text-ink-400 transition ${open[g.grade] ? 'rotate-180' : ''}`}
-              />
-            </button>
-            {open[g.grade] && (
-              <ul className="mt-3 space-y-2 pl-1">
-                {g.modules.map((m) => (
-                  <li key={m.module_id} className="flex items-center gap-4 text-[13px]">
-                    <span className="min-w-0 flex-1 truncate text-ink-700">{m.title}</span>
-                    {m.questions > 0 && <span className="shrink-0 text-amber-700">? {m.questions}</span>}
-                    <span className="w-14 shrink-0 text-right tabular-nums text-ink-400">
-                      {m.solved}/{m.total}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
+        {book.modules.map((m) => (
+          <li key={m.module_id} className="flex items-center gap-4 py-2.5">
+            <span className="min-w-0 flex-1 truncate text-[14px] text-ink-700">{m.title}</span>
+            <span className="hidden w-28 shrink-0 sm:block">
+              <ProgressBar value={percent(m.solved, m.total)} className="bg-pen-500" height="h-1.5" />
+            </span>
+            {m.questions > 0 && <span className="shrink-0 text-[13px] text-amber-700">? {m.questions}</span>}
+            <span className="w-14 shrink-0 text-right text-[13px] tabular-nums text-ink-400">
+              {m.solved}/{m.total}
+            </span>
           </li>
         ))}
       </ul>
@@ -318,7 +296,7 @@ function CabinetContent({ user }) {
             <div className="mt-10">
               <h2 className="text-[22px] font-extrabold">Задачи из сборников</h2>
               <p className="mt-1.5 text-[15px] text-ink-500">
-                Отдельно от тем каталога: задачи сборников привязаны к программе по классам.
+                Отдельно от тем каталога: задачи сборников разложены по темам программы.
               </p>
               <div className="mt-5 space-y-4">
                 {problemBooks.map((b) => (

@@ -22,7 +22,6 @@ from app.models.enums import LevelEnum, SubjectEnum
 from app.models.user import User
 from app.schemas.common import TopicProgressOut
 from app.schemas.content import (
-    CurriculumGradeOut,
     CurriculumLessonOut,
     CurriculumModuleOut,
     LessonProblemOut,
@@ -230,12 +229,12 @@ async def list_plans(session: AsyncSession) -> list[PlanOut]:
     ]
 
 
-async def list_curriculum(session: AsyncSession, subject: SubjectEnum) -> list[CurriculumGradeOut]:
+async def list_curriculum(session: AsyncSession, subject: SubjectEnum) -> list[CurriculumModuleOut]:
     stmt = (
         select(CurriculumModule)
         .where(CurriculumModule.subject == subject)
         .options(selectinload(CurriculumModule.lessons).selectinload(CurriculumLesson.references))
-        .order_by(CurriculumModule.grade, CurriculumModule.position)
+        .order_by(CurriculumModule.position)
     )
     modules = (await session.execute(stmt)).scalars().all()
 
@@ -247,37 +246,42 @@ async def list_curriculum(session: AsyncSession, subject: SubjectEnum) -> list[C
         ).all()
     )
 
-    grades: dict[int, list[CurriculumModuleOut]] = {}
+    def grades_of(value: str) -> list[int]:
+        return sorted(int(g) for g in value.split(",") if g)
+
+    result: list[CurriculumModuleOut] = []
     for module in modules:
-        grades.setdefault(module.grade, []).append(
+        lessons = [
+            CurriculumLessonOut(
+                id=lesson.id,
+                number=lesson.number,
+                title=lesson.title,
+                description=lesson.description,
+                grades=grades_of(lesson.grades),
+                topic_id=lesson.topic_id,
+                problem_count=counts.get(lesson.id, 0),
+                references=[
+                    LessonReferenceOut(
+                        source_id=ref.source_id,
+                        locator=ref.locator,
+                        problems=ref.problems,
+                        page=ref.page,
+                        solutions_page=ref.solutions_page,
+                    )
+                    for ref in lesson.references
+                ],
+            )
+            for lesson in module.lessons
+        ]
+        result.append(
             CurriculumModuleOut(
                 id=module.id,
                 title=module.title,
-                lessons=[
-                    CurriculumLessonOut(
-                        id=lesson.id,
-                        number=lesson.number,
-                        title=lesson.title,
-                        description=lesson.description,
-                        topic_id=lesson.topic_id,
-                        problem_count=counts.get(lesson.id, 0),
-                        references=[
-                            LessonReferenceOut(
-                                source_id=ref.source_id,
-                                locator=ref.locator,
-                                problems=ref.problems,
-                                page=ref.page,
-                                solutions_page=ref.solutions_page,
-                            )
-                            for ref in lesson.references
-                        ],
-                    )
-                    for lesson in module.lessons
-                ],
+                grades=sorted({g for lesson in lessons for g in lesson.grades}),
+                lessons=lessons,
             )
         )
-    return [CurriculumGradeOut(grade=grade, modules=items) for grade, items in grades.items()]
-
+    return result
 
 async def list_literature(session: AsyncSession, subject: SubjectEnum) -> list[LiteratureSourceOut]:
     stmt = (

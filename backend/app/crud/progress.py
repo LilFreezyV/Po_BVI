@@ -19,7 +19,6 @@ from app.models.progress import QUESTION, SOLVED, ProblemAttempt, TaskAttempt
 from app.schemas.common import TopicProgressOut
 from app.schemas.progress import (
     ContinueItemOut,
-    ProblemBookGradeOut,
     ProblemBookModuleOut,
     ProblemBookProgressOut,
     ProgressOverviewOut,
@@ -357,13 +356,12 @@ async def list_questions(session: AsyncSession, user_id: uuid.UUID) -> list[Ques
 
 def _group_problem_books(rows, statuses: dict[str, str]) -> list[ProblemBookProgressOut]:
     books: dict[str, dict] = {}
-    for problem_id, source_id, source_title, subject, grade, module_id, module_title, position in rows:
+    for problem_id, source_id, source_title, subject, module_id, module_title, position in rows:
         book = books.setdefault(
             source_id,
-            {"title": source_title, "subject": getattr(subject, "value", subject), "grades": {}},
+            {"title": source_title, "subject": getattr(subject, "value", subject), "modules": {}},
         )
-        grade_entry = book["grades"].setdefault(grade, {})
-        module = grade_entry.setdefault(
+        module = book["modules"].setdefault(
             module_id, {"title": module_title, "position": position, "total": 0, "solved": 0, "questions": 0}
         )
         module["total"] += 1
@@ -375,39 +373,28 @@ def _group_problem_books(rows, statuses: dict[str, str]) -> list[ProblemBookProg
 
     result = []
     for source_id, book in books.items():
-        grades = []
-        for grade in sorted(book["grades"]):
-            modules = [
-                ProblemBookModuleOut(
-                    module_id=mid, title=m["title"], total=m["total"], solved=m["solved"], questions=m["questions"]
-                )
-                for mid, m in sorted(book["grades"][grade].items(), key=lambda kv: kv[1]["position"])
-            ]
-            grades.append(
-                ProblemBookGradeOut(
-                    grade=grade,
-                    total=sum(m.total for m in modules),
-                    solved=sum(m.solved for m in modules),
-                    questions=sum(m.questions for m in modules),
-                    modules=modules,
-                )
+        modules = [
+            ProblemBookModuleOut(
+                module_id=mid, title=m["title"], total=m["total"], solved=m["solved"], questions=m["questions"]
             )
+            for mid, m in sorted(book["modules"].items(), key=lambda kv: kv[1]["position"])
+        ]
         result.append(
             ProblemBookProgressOut(
                 source_id=source_id,
                 title=book["title"],
                 subject=book["subject"],
-                total=sum(g.total for g in grades),
-                solved=sum(g.solved for g in grades),
-                questions=sum(g.questions for g in grades),
-                grades=grades,
+                total=sum(m.total for m in modules),
+                solved=sum(m.solved for m in modules),
+                questions=sum(m.questions for m in modules),
+                modules=modules,
             )
         )
     return result
 
 
 async def get_problem_book_progress(session: AsyncSession, user_id: uuid.UUID) -> list[ProblemBookProgressOut]:
-    """Прогресс по задачам из сборников: сборник → класс → тема программы."""
+    """Прогресс по задачам из сборников: сборник → тема программы."""
     rows = (
         await session.execute(
             select(
@@ -415,7 +402,6 @@ async def get_problem_book_progress(session: AsyncSession, user_id: uuid.UUID) -
                 ProblemSource.id,
                 func.coalesce(ProblemSource.short_title, ProblemSource.title),
                 CurriculumModule.subject,
-                CurriculumModule.grade,
                 CurriculumModule.id,
                 CurriculumModule.title,
                 CurriculumModule.position,

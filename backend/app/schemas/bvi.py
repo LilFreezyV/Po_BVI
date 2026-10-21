@@ -53,6 +53,8 @@ class BviOlympiadOut(BaseModel):
     site_url: str | None
     reg_url: str | None
     chat_url: str | None
+    archive_url: str | None
+    archive_note: str | None
     catalog_id: str | None
     benefits: list[BviBenefitOut]
 

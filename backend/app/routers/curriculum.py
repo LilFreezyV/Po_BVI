@@ -6,16 +6,17 @@ from app.database import get_db
 from app.models.enums import SubjectEnum
 from app.models.user import User
 from app.security import get_current_user_optional
-from app.schemas.content import CurriculumGradeOut, LessonProblemsOut, LiteratureSourceOut
+from app.schemas.content import CurriculumModuleOut, LessonProblemsOut, LiteratureSourceOut
 
 router = APIRouter(prefix="/curriculum", tags=["content"])
 
 
-@router.get("", response_model=list[CurriculumGradeOut])
+@router.get("", response_model=list[CurriculumModuleOut])
 async def list_curriculum(
     subject: SubjectEnum = SubjectEnum.physics, session: AsyncSession = Depends(get_db)
-) -> list[CurriculumGradeOut]:
-    """Программа по классам: класс → темы → подтемы, у подтем — ссылки на главы книг."""
+) -> list[CurriculumModuleOut]:
+    """Программа одним списком: крупные темы в порядке прохождения → подтемы.
+    Классы не делят программу, а подписывают подтему (grades)."""
     return await content_crud.list_curriculum(session, subject)
 
 

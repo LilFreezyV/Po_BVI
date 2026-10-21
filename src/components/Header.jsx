@@ -6,7 +6,7 @@ const NAV = [
   { to: '/program', label: 'Программа' },
   { to: '/catalog', label: 'Каталог тем' },
   { to: '/bvi', label: 'БВИ и вузы' },
-  { to: '/base', label: 'Олимпиады' },
+  { to: '/archive', label: 'Архив заданий' },
   { to: '/progress', label: 'Мой прогресс' },
   { to: '/#pricing', label: 'Тарифы' },
 ]

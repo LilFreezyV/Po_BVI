@@ -7,6 +7,7 @@ import TopicPage from './pages/TopicPage.jsx'
 import ProgressPage from './pages/Progress.jsx'
 import Base from './pages/Base.jsx'
 import Bvi from './pages/Bvi.jsx'
+import Archive from './pages/Archive.jsx'
 import Login from './pages/Login.jsx'
 import Program from './pages/Program.jsx'
 
@@ -48,6 +49,8 @@ export default function App() {
     page = <Base />
   } else if (path === '/bvi') {
     page = <Bvi />
+  } else if (path === '/archive') {
+    page = <Archive />
   } else if (path === '/program') {
     page = <Program focusLesson={query.get('lesson')} />
   } else if (path === '/login') {
