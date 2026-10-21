@@ -535,8 +535,8 @@ function Bases({ olympiads, universities }) {
             </h2>
           </Reveal>
           <Reveal delay={0.1}>
-            <Link to="/base" className="inline-flex items-center gap-2 text-[15px] font-semibold text-pen-700 hover:text-pen-900">
-              Вся база
+            <Link to="/bvi" className="inline-flex items-center gap-2 text-[15px] font-semibold text-pen-700 hover:text-pen-900">
+              Таблица БВИ: 30 олимпиад × 11 вузов
               <Icon name="arrow" className="h-4 w-4" />
             </Link>
           </Reveal>
