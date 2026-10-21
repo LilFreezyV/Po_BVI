@@ -70,13 +70,29 @@ export function SectionHeading({ eyebrow, title, text, align = 'left', className
   return (
     <div className={`${align === 'center' ? 'mx-auto max-w-2xl text-center' : 'max-w-2xl'} ${className}`}>
       {eyebrow && <p className="eyebrow mb-3">{eyebrow}</p>}
-      <h2 className="text-[28px] font-extrabold leading-[1.15] sm:text-[36px]">{title}</h2>
+      <h2 className="font-serif text-[28px] font-semibold leading-[1.15] sm:text-[34px]">{title}</h2>
       {text && <p className="mt-4 text-[17px] leading-relaxed text-ink-500">{text}</p>}
     </div>
   )
 }
 
-export function ProgressBar({ value, className = 'bg-brand-500', height = 'h-1.5' }) {
+// Шапка внутренней страницы: номер раздела моноширинным, заголовок — serif,
+// на фоне линованная бумага. Общая для каталога, программы, базы и кабинета.
+export function PageHeader({ eyebrow, title, text, children }) {
+  return (
+    <div className="relative">
+      <div className="ruled-paper pointer-events-none absolute inset-x-0 -top-10 h-52 -z-10" />
+      <div className="max-w-3xl">
+        {eyebrow && <p className="eyebrow mb-3">{eyebrow}</p>}
+        <h1 className="font-serif text-[32px] font-semibold leading-tight sm:text-[40px]">{title}</h1>
+        {text && <p className="mt-4 max-w-2xl text-[17px] leading-relaxed text-ink-500">{text}</p>}
+        {children}
+      </div>
+    </div>
+  )
+}
+
+export function ProgressBar({ value, className = 'bg-pen-500', height = 'h-1.5' }) {
   return (
     <div className={`w-full overflow-hidden rounded-full bg-ink-900/[0.07] ${height}`}>
       <div
@@ -90,9 +106,9 @@ export function ProgressBar({ value, className = 'bg-brand-500', height = 'h-1.5
 export function Logo({ compact = false }) {
   return (
     <span className="inline-flex items-center gap-2.5">
-      <span className="relative grid h-9 w-9 place-items-center rounded-[10px] bg-brand-700 text-white">
+      <span className="relative grid h-9 w-9 place-items-center rounded-[10px] bg-pen-700 text-white">
         <span className="text-[15px] font-extrabold leading-none tracking-tight">БВ</span>
-        <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-paper bg-clay-400" />
+        <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-paper bg-mark-400" />
       </span>
       {!compact && (
         <span className="flex flex-col leading-none">
@@ -103,5 +119,41 @@ export function Logo({ compact = false }) {
         </span>
       )}
     </span>
+  )
+}
+
+/* ——— Заглушки на время загрузки ———
+   Вместо надписи «Загружаем…» на пустом экране показываем контур будущего содержимого:
+   данные идут из облачной БД и ощутимо небыстро, пустая страница выглядит как поломка. */
+
+export function Skeleton({ className = '' }) {
+  return <div className={`animate-pulse rounded bg-ink-900/[0.06] ${className}`} />
+}
+
+export function SkeletonCards({ count = 6, columns = 'sm:grid-cols-2 lg:grid-cols-3' }) {
+  return (
+    <div className={`grid gap-4 ${columns}`} aria-hidden="true">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="card p-5">
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="mt-3 h-3 w-full" />
+          <Skeleton className="mt-2 h-3 w-4/5" />
+          <div className="mt-5 flex gap-2">
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-4 w-12" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export function SkeletonLines({ count = 5, className = '' }) {
+  return (
+    <div className={`space-y-3 ${className}`} aria-hidden="true">
+      {Array.from({ length: count }).map((_, i) => (
+        <Skeleton key={i} className={`h-3 ${i % 3 === 2 ? 'w-3/5' : 'w-full'}`} />
+      ))}
+    </div>
   )
 }

@@ -3,7 +3,7 @@ import { listCurriculum, listLessonProblems, listLiterature, listTopics, setProb
 import { useAsync } from '../lib/useAsync.js'
 import { useAuth } from '../lib/auth.jsx'
 import AttemptButtons, { ATTEMPT_CARD } from '../components/AttemptButtons.jsx'
-import { Chip, Icon, Link } from '../components/ui.jsx'
+import { Chip, Icon, Link, SkeletonCards, SkeletonLines } from '../components/ui.jsx'
 import MathText from '../components/MathText.jsx'
 
 const asset = (path) => `${import.meta.env.BASE_URL}${path}`
@@ -71,7 +71,7 @@ function ProblemItem({ problem, status, onStatus }) {
             <div className="mt-3">
               <button
                 onClick={() => setShowAnswer((v) => !v)}
-                className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-700 hover:text-brand-900"
+                className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-pen-700 hover:text-pen-900"
               >
                 {showAnswer ? 'Скрыть ответ' : 'Показать ответ'}
                 <Icon name="chevronDown" className={`h-4 w-4 transition ${showAnswer ? 'rotate-180' : ''}`} />
@@ -94,7 +94,7 @@ function LessonProblems({ lessonId }) {
   const { token } = useAuth()
   const { data, loading, error } = useAsync(() => listLessonProblems(lessonId, token), [lessonId, token])
   const [statuses, setStatuses] = useState({})
-  if (loading) return <p className="mt-3 text-[14px] text-ink-400">Загружаем задачи…</p>
+  if (loading) return <SkeletonLines count={4} className="mt-4" />
   if (error) return <p className="mt-3 text-[14px] text-ink-400">Не удалось загрузить задачи.</p>
 
   const onStatus = async (problemId, status) => {
@@ -202,7 +202,7 @@ function ReferenceItem({ reference, source }) {
       <Icon name="book" className="mt-[3px] h-3.5 w-3.5 shrink-0 text-ink-300" />
       <span className="min-w-0">
         {href ? (
-          <a href={href} target="_blank" rel="noreferrer" className="hover:text-brand-800 hover:underline">
+          <a href={href} target="_blank" rel="noreferrer" className="hover:text-pen-800 hover:underline">
             {label}
           </a>
         ) : (
@@ -215,7 +215,7 @@ function ReferenceItem({ reference, source }) {
               href={pdfPage(source.url, reference.solutions_page)}
               target="_blank"
               rel="noreferrer"
-              className="font-semibold text-brand-700 hover:text-brand-900"
+              className="font-semibold text-pen-700 hover:text-pen-900"
             >
               решения
             </a>
@@ -251,7 +251,7 @@ function Literature({ sources }) {
                 <li key={s.id} className="rounded-xl border border-line bg-white p-4">
                   <p className="text-[15px] font-bold leading-snug">
                     {s.url ? (
-                      <a href={s.url} target="_blank" rel="noreferrer" className="hover:text-brand-800 hover:underline">
+                      <a href={s.url} target="_blank" rel="noreferrer" className="hover:text-pen-800 hover:underline">
                         {s.title}
                       </a>
                     ) : (
@@ -339,7 +339,7 @@ function LessonRow({ lesson, topicTitle, sources, focused }) {
               <button
                 onClick={() => setOpen((v) => !v)}
                 aria-expanded={open}
-                className="inline-flex items-center gap-1.5 rounded-full bg-clay-50 px-3 py-1 text-[13px] font-semibold text-clay-600 transition hover:bg-clay-100"
+                className="inline-flex items-center gap-1.5 rounded-full bg-mark-50 px-3 py-1 text-[13px] font-semibold text-mark-600 transition hover:bg-mark-100"
               >
                 Задачи из сборника · {lesson.problem_count}
                 <Icon name="chevronDown" className={`h-3.5 w-3.5 transition ${open ? 'rotate-180' : ''}`} />
@@ -348,7 +348,7 @@ function LessonRow({ lesson, topicTitle, sources, focused }) {
             {lesson.topic_id && (
               <Link
                 to={`/topic/${lesson.topic_id}`}
-                className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-700 hover:text-brand-900"
+                className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-pen-700 hover:text-pen-900"
               >
                 Задачи по теме{topicTitle ? `: ${topicTitle}` : ''}
                 <Icon name="arrow" className="h-3.5 w-3.5" />
@@ -375,7 +375,7 @@ function ModuleCard({ module, index, open, onToggle, topicTitle, showRange, sour
         className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition hover:bg-paper/60 sm:px-6"
       >
         <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-500">Тема {index + 1}</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-pen-500">Тема {index + 1}</p>
           <h3 className="mt-1 text-[18px] font-extrabold leading-snug sm:text-[20px]">{module.title}</h3>
           <p className="mt-1 text-[13px] text-ink-400">
             {count} {lessonsWord(count)}
@@ -497,10 +497,11 @@ export default function Program({ focusLesson = null }) {
   }
 
   return (
-    <div className="container-x py-10 lg:py-14">
+    <div className="container-x relative py-10 lg:py-14">
+      <div className="ruled-paper pointer-events-none absolute inset-x-0 top-0 h-56 -z-10" />
       <div className="max-w-3xl">
         <p className="eyebrow mb-3">Программа</p>
-        <h1 className="text-[32px] font-extrabold leading-tight sm:text-[42px]">{meta.title}: программа по классам</h1>
+        <h1 className="font-serif text-[32px] font-semibold leading-tight sm:text-[40px]">{meta.title}: программа по классам</h1>
         <p className="mt-4 text-[17px] leading-relaxed text-ink-500">{meta.intro}</p>
       </div>
 
@@ -526,7 +527,7 @@ export default function Program({ focusLesson = null }) {
                   key={g.grade}
                   onClick={() => selectGrade(g.grade)}
                   className={`rounded-lg px-4 py-2 text-[14px] font-semibold transition ${
-                    g.grade === grade ? 'bg-brand-700 text-white' : 'text-ink-500 hover:text-ink-900'
+                    g.grade === grade ? 'bg-pen-700 text-white' : 'text-ink-500 hover:text-ink-900'
                   }`}
                 >
                   {g.grade} класс
@@ -539,12 +540,12 @@ export default function Program({ focusLesson = null }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={meta.placeholder}
-            className="w-full rounded-xl border border-line bg-white px-4 py-2.5 text-[15px] outline-none transition placeholder:text-ink-300 focus:border-brand-400 sm:w-72"
+            className="w-full rounded-xl border border-line bg-white px-4 py-2.5 text-[15px] outline-none transition placeholder:text-ink-300 focus:border-pen-400 sm:w-72"
           />
         </div>
       </div>
 
-      {loading && <p className="py-16 text-center text-ink-400">Загружаем программу…</p>}
+      {loading && <div className="pt-8"><SkeletonCards count={4} columns="" /></div>}
       {error && !loading && (
         <p className="py-16 text-center text-ink-400">Не удалось загрузить данные. Проверьте, что бэкенд запущен.</p>
       )}
@@ -565,7 +566,7 @@ export default function Program({ focusLesson = null }) {
                   <li key={m.id}>
                     <button
                       onClick={() => jumpTo(m.id)}
-                      className="flex w-full items-baseline gap-2 rounded-lg px-2.5 py-2 text-left text-[14px] leading-snug text-ink-700 transition hover:bg-brand-50 hover:text-brand-800"
+                      className="flex w-full items-baseline gap-2 rounded-lg px-2.5 py-2 text-left text-[14px] leading-snug text-ink-700 transition hover:bg-pen-50 hover:text-pen-800"
                     >
                       <span className="w-4 shrink-0 text-[12px] font-bold tabular-nums text-ink-300">{i + 1}</span>
                       <span className="flex-1">{m.title}</span>
@@ -577,7 +578,7 @@ export default function Program({ focusLesson = null }) {
               {literature.length > 0 && (
                 <button
                   onClick={() => document.getElementById('literature')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="mt-3 flex w-full items-center gap-2 rounded-lg border-t border-line px-2.5 pb-2 pt-4 text-left text-[14px] font-semibold text-ink-700 transition hover:text-brand-800"
+                  className="mt-3 flex w-full items-center gap-2 rounded-lg border-t border-line px-2.5 pb-2 pt-4 text-left text-[14px] font-semibold text-ink-700 transition hover:text-pen-800"
                 >
                   <Icon name="book" className="h-4 w-4 text-ink-400" />
                   Литература · {literature.length}
@@ -590,7 +591,7 @@ export default function Program({ focusLesson = null }) {
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap gap-2">
                 {searching ? (
-                  <Chip className="bg-brand-50 text-brand-700">
+                  <Chip className="bg-pen-50 text-pen-700">
                     Найдено: {shownLessons} {lessonsWord(shownLessons)}
                   </Chip>
                 ) : (
@@ -601,9 +602,9 @@ export default function Program({ focusLesson = null }) {
                     <Chip className="border border-line bg-white text-ink-700">
                       {stats.lessons} {lessonsWord(stats.lessons)}
                     </Chip>
-                    <Chip className="bg-brand-50 text-brand-700">{stats.withTasks} с задачами на сайте</Chip>
+                    <Chip className="bg-pen-50 text-pen-700">{stats.withTasks} с задачами на сайте</Chip>
                     {stats.problems > 0 && (
-                      <Chip className="bg-clay-50 text-clay-600">
+                      <Chip className="bg-mark-50 text-mark-600">
                         {stats.problems} {problemsWord(stats.problems)} из сборника
                       </Chip>
                     )}
@@ -620,7 +621,7 @@ export default function Program({ focusLesson = null }) {
               {!searching && (
                 <button
                   onClick={() => setAll(!allCollapsed)}
-                  className="text-[14px] font-semibold text-brand-700 hover:text-brand-900"
+                  className="text-[14px] font-semibold text-pen-700 hover:text-pen-900"
                 >
                   {allCollapsed ? 'Развернуть все' : 'Свернуть все'}
                 </button>

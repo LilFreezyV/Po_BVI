@@ -55,7 +55,7 @@ export const STEPS = [
 ]
 
 export const STATUS_META = {
-  done: { title: 'Пройдено', dot: 'bg-brand-500', chip: 'bg-brand-50 text-brand-700', bar: 'bg-brand-500' },
+  done: { title: 'Пройдено', dot: 'bg-pen-500', chip: 'bg-pen-50 text-pen-700', bar: 'bg-pen-500' },
   progress: { title: 'В процессе', dot: 'bg-amber-600', chip: 'bg-amber-50 text-amber-700', bar: 'bg-amber-600' },
   new: { title: 'Не начато', dot: 'bg-ink-300', chip: 'bg-ink-900/5 text-ink-500', bar: 'bg-ink-300' },
 }
