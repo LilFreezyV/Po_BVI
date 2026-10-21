@@ -95,6 +95,7 @@ export const listUniversities = () => request('/universities')
 export const listPlans = () => request('/plans')
 export const listCurriculum = (subject = 'physics') => request(`/curriculum?subject=${subject}`)
 export const listLessonProblems = (lessonId, token) => request(`/curriculum/lessons/${lessonId}/problems`, { token })
+export const getBvi = () => request('/bvi')
 export const listLiterature = (subject = 'physics') => request(`/curriculum/literature?subject=${subject}`)
 
 /* ——— Авторизация ——— */

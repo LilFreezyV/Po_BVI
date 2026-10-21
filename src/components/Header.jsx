@@ -5,7 +5,8 @@ import { useAuth } from '../lib/auth.jsx'
 const NAV = [
   { to: '/program', label: 'Программа' },
   { to: '/catalog', label: 'Каталог тем' },
-  { to: '/base', label: 'Олимпиады и вузы' },
+  { to: '/bvi', label: 'БВИ и вузы' },
+  { to: '/base', label: 'Олимпиады' },
   { to: '/progress', label: 'Мой прогресс' },
   { to: '/#pricing', label: 'Тарифы' },
 ]

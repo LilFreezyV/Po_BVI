@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -290,3 +290,81 @@ class PlanFeature(Base):
     text: Mapped[str] = mapped_column(String(500), nullable=False)
 
     plan: Mapped["Plan"] = relationship(back_populates="features")
+
+
+# ——— БВИ-навигатор ———
+# Отдельные таблицы, а не расширение olympiads/universities: в каталоге живут несколько
+# «витринных» олимпиад с маркетинговым описанием, а здесь — весь перечень по физике
+# (30 олимпиад × 11 вузов-столбцов) со ссылками на первоисточники. Связь с каталогом —
+# необязательная (BviOlympiad.catalog_id), чтобы можно было дойти до задач по теме.
+
+
+class BviUniversity(Base):
+    __tablename__ = "bvi_universities"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    short: Mapped[str] = mapped_column(String(64), nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    winner: Mapped[str] = mapped_column(Text, nullable=False)
+    prize: Mapped[str] = mapped_column(Text, nullable=False)
+    ege: Mapped[str] = mapped_column(Text, nullable=False)
+    grades: Mapped[str] = mapped_column(Text, nullable=False)
+    draft_2027: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class BviOlympiad(Base):
+    __tablename__ = "bvi_olympiads"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Уровень по перечню: 'I' | 'II' | 'III' | 'off' (нет в перечне — льгот не даёт).
+    level: Mapped[str] = mapped_column(String(8), nullable=False)
+    organizer: Mapped[str] = mapped_column(String(255), nullable=False)
+    grades: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(64), nullable=False)
+    registration: Mapped[str | None] = mapped_column(Text, nullable=True)
+    selection: Mapped[str | None] = mapped_column(Text, nullable=True)
+    final: Mapped[str | None] = mapped_column(Text, nullable=True)
+    site_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    reg_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    chat_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    catalog_id: Mapped[str | None] = mapped_column(
+        ForeignKey("olympiads.id", ondelete="SET NULL"), nullable=True
+    )
+
+    benefits: Mapped[list["BviBenefit"]] = relationship(
+        back_populates="olympiad", cascade="all, delete-orphan"
+    )
+
+
+class BviBenefit(Base):
+    """Одна ячейка сводной таблицы: что даёт диплом этой олимпиады в этом вузе."""
+
+    __tablename__ = "bvi_benefits"
+
+    olympiad_id: Mapped[str] = mapped_column(
+        ForeignKey("bvi_olympiads.id", ondelete="CASCADE"), primary_key=True
+    )
+    university_id: Mapped[str] = mapped_column(
+        ForeignKey("bvi_universities.id", ondelete="CASCADE"), primary_key=True
+    )
+    # Код из легенды: 'bvi' | 'bvi_part' | 'score100' | 'none' | 'unknown'.
+    winner: Mapped[str] = mapped_column(String(16), nullable=False)
+    prize: Mapped[str] = mapped_column(String(16), nullable=False)
+
+    olympiad: Mapped["BviOlympiad"] = relationship(back_populates="benefits")
+
+
+class BviDate(Base):
+    """Ближайшие даты сезона. ends_on — когда событие перестаёт быть актуальным."""
+
+    __tablename__ = "bvi_dates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    label: Mapped[str] = mapped_column(String(64), nullable=False)
+    ends_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    olympiad: Mapped[str] = mapped_column(String(255), nullable=False)
+    note: Mapped[str] = mapped_column(Text, nullable=False)

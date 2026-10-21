@@ -14,6 +14,10 @@ from sqlalchemy import delete, func, select
 
 from app.database import async_session_factory
 from app.models.content import (
+    BviBenefit,
+    BviDate,
+    BviOlympiad,
+    BviUniversity,
     CurriculumLesson,
     CurriculumModule,
     LessonProblem,
@@ -32,6 +36,9 @@ from app.models.content import (
     University,
     UniversityOlympiad,
 )
+from scripts.bvi_data import DATES as BVI_DATES
+from scripts.bvi_data import OLYMPIADS as BVI_OLYMPIADS
+from scripts.bvi_data import UNIVERSITIES as BVI_UNIVERSITIES
 from scripts.curriculum_data import CURRICULUM, iter_modules, lesson_id, module_id
 from scripts import literature_math
 from scripts import problems_savchenko_baldin as savchenko_baldin
@@ -318,6 +325,46 @@ async def seed() -> None:
                         )
                     )
 
+        # ——— БВИ-навигатор ———
+        # Пересобираем целиком: строк немного, а льготы вузов меняются каждый сезон,
+        # и при merge «по PK» удалённые олимпиады оставались бы в таблице.
+        await session.execute(delete(BviBenefit))
+        await session.execute(delete(BviDate))
+        await session.execute(delete(BviOlympiad))
+        await session.execute(delete(BviUniversity))
+        await session.flush()
+
+        known_universities = {u["id"] for u in BVI_UNIVERSITIES}
+        for position, uni in enumerate(BVI_UNIVERSITIES, start=1):
+            session.add(BviUniversity(position=position, **uni))
+        for olympiad in BVI_OLYMPIADS:
+            data = {k: v for k, v in olympiad.items() if k != "benefits"}
+            session.add(BviOlympiad(**data))
+            for university_id, (winner, prize) in olympiad["benefits"].items():
+                if university_id not in known_universities:
+                    raise AssertionError(
+                        f"{olympiad['id']}: неизвестный вуз-столбец {university_id}"
+                    )
+                session.add(
+                    BviBenefit(
+                        olympiad_id=olympiad["id"],
+                        university_id=university_id,
+                        winner=winner,
+                        prize=prize,
+                    )
+                )
+        for position, item in enumerate(BVI_DATES, start=1):
+            ends = item["ends_on"]
+            session.add(
+                BviDate(
+                    position=position,
+                    label=item["label"],
+                    ends_on=datetime.strptime(ends, "%Y-%m-%d").date() if ends else None,
+                    olympiad=item["olympiad"],
+                    note=item["note"],
+                )
+            )
+
         await session.commit()
 
         topics_count = await session.scalar(select(func.count(Topic.id)))
@@ -328,11 +375,14 @@ async def seed() -> None:
         lessons_count = await session.scalar(select(func.count(CurriculumLesson.id)))
         problems_count = await session.scalar(select(func.count(LessonProblem.id)))
         references_count = await session.scalar(select(func.count(LessonReference.id)))
+        bvi_count = await session.scalar(select(func.count(BviOlympiad.id)))
+        bvi_cells = await session.scalar(select(func.count()).select_from(BviBenefit))
 
         print(
             f"Засеяно: {topics_count} тем, {tasks_count} задач, {olympiads_count} олимпиад, "
             f"{universities_count} вузов, {plans_count} тарифов, {lessons_count} подтем в программе, "
-            f"{problems_count} задач к подтемам, {references_count} ссылок на литературу"
+            f"{problems_count} задач к подтемам, {references_count} ссылок на литературу, "
+            f"{bvi_count} олимпиад в БВИ-навигаторе ({bvi_cells} ячеек льгот)"
         )
 
 

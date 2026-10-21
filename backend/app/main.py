@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import auth, curriculum, olympiads, plans, progress, sections, subjects, topics, universities
+from app.routers import auth, bvi, curriculum, olympiads, plans, progress, sections, subjects, topics, universities
 
 app = FastAPI(title="Без Вступительных API", version="0.1.0")
 
@@ -21,6 +21,7 @@ app.include_router(topics.router, prefix="/api")
 app.include_router(curriculum.router, prefix="/api")
 app.include_router(olympiads.router, prefix="/api")
 app.include_router(universities.router, prefix="/api")
+app.include_router(bvi.router, prefix="/api")
 app.include_router(plans.router, prefix="/api")
 app.include_router(progress.router, prefix="/api")
 

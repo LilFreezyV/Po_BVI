@@ -1,5 +1,9 @@
 from app.models.base import Base
 from app.models.content import (
+    BviBenefit,
+    BviDate,
+    BviOlympiad,
+    BviUniversity,
     CurriculumLesson,
     CurriculumModule,
     LessonProblem,
@@ -40,6 +44,10 @@ __all__ = [
     "ProblemSource",
     "LessonProblem",
     "LessonReference",
+    "BviUniversity",
+    "BviOlympiad",
+    "BviBenefit",
+    "BviDate",
     "User",
     "TaskAttempt",
     "ProblemAttempt",

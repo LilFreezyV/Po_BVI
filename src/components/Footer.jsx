@@ -7,7 +7,7 @@ const COLUMNS = [
     links: [
       { label: 'Каталог тем', to: '/catalog' },
       { label: 'База олимпиад', to: '/base' },
-      { label: 'База вузов', to: '/base' },
+      { label: 'БВИ и вузы', to: '/bvi' },
       { label: 'Личный кабинет', to: '/progress' },
     ],
   },
@@ -16,7 +16,7 @@ const COLUMNS = [
     links: [
       { label: 'Физика', to: '/catalog' },
       { label: 'Математика', to: '/catalog' },
-      { label: 'Перечневые олимпиады', to: '/base' },
+      { label: 'Перечневые олимпиады', to: '/bvi' },
       { label: 'ВсОШ — обзорно', to: '/base' },
     ],
   },

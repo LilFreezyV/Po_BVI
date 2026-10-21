@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { listOlympiads, listUniversities } from '../lib/api.js'
 import { useAsync } from '../lib/useAsync.js'
 import { SUBJECT_LABELS } from '../lib/subjects.js'
-import { Chip, Icon, SkeletonCards, navigate } from '../components/ui.jsx'
+import { Chip, Icon, Link, SkeletonCards, navigate } from '../components/ui.jsx'
 
 const TABS = [
   { id: 'olympiads', label: 'Олимпиады' },
@@ -104,12 +104,19 @@ export default function Base() {
       <div className="max-w-3xl">
         <p className="eyebrow mb-3">База олимпиад и вузов</p>
         <h1 className="font-serif text-[32px] font-semibold leading-tight sm:text-[40px]">
-          Какая олимпиада даёт БВИ в какой вуз
+          Олимпиады, к которым мы готовим
         </h1>
         <p className="mt-4 text-[17px] leading-relaxed text-ink-500">
-          Перечневые олимпиады дают льготы по правилам конкретного вуза, и эти правила меняются каждый год. Здесь они
-          собраны в одном месте — раздел открыт бесплатно.
+          Короткие карточки: что за олимпиада, кому подходит и что спрашивают. Полная таблица льгот
+          по всем тридцати перечневым олимпиадам по физике — в БВИ-навигаторе.
         </p>
+        <Link
+          to="/bvi"
+          className="mt-4 inline-flex items-center gap-2 text-[15px] font-semibold text-pen-700 hover:text-pen-900"
+        >
+          Таблица «олимпиада → вуз» и условия одиннадцати вузов
+          <Icon name="arrow" className="h-4 w-4" />
+        </Link>
       </div>
 
       <div className="mt-8 inline-flex rounded-xl border border-line bg-white p-1">
