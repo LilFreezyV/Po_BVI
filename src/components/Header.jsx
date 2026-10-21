@@ -43,7 +43,7 @@ export default function Header({ route }) {
               key={item.to}
               to={item.to}
               className={`whitespace-nowrap rounded-lg px-3 py-2 text-[15px] font-semibold transition ${
-                isActive(item.to) ? 'bg-brand-50 text-brand-700' : 'text-ink-500 hover:bg-brand-50/60 hover:text-ink-900'
+                isActive(item.to) ? 'bg-pen-50 text-pen-700' : 'text-ink-500 hover:bg-pen-50/60 hover:text-ink-900'
               }`}
             >
               {item.label}
@@ -91,7 +91,7 @@ export default function Header({ route }) {
                 key={item.to}
                 to={item.to}
                 className={`rounded-lg px-3 py-3 text-[15px] font-semibold ${
-                  isActive(item.to) ? 'bg-brand-50 text-brand-700' : 'text-ink-700'
+                  isActive(item.to) ? 'bg-pen-50 text-pen-700' : 'text-ink-700'
                 }`}
               >
                 {item.label}

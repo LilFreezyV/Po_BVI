@@ -8,7 +8,7 @@ const MODES = [
 ]
 
 const inputCls =
-  'w-full rounded-xl border border-line bg-white px-4 py-2.5 text-[15px] outline-none transition placeholder:text-ink-300 focus:border-brand-400'
+  'w-full rounded-xl border border-line bg-white px-4 py-2.5 text-[15px] outline-none transition placeholder:text-ink-300 focus:border-pen-400'
 
 function Field({ label, ...props }) {
   return (
@@ -73,7 +73,7 @@ export default function Login({ next }) {
                 setError('')
               }}
               className={`rounded-lg px-4 py-2 text-[14px] font-semibold transition ${
-                mode === m.id ? 'bg-brand-700 text-white' : 'text-ink-500 hover:text-ink-900'
+                mode === m.id ? 'bg-pen-700 text-white' : 'text-ink-500 hover:text-ink-900'
               }`}
             >
               {m.label}
@@ -141,7 +141,7 @@ export default function Login({ next }) {
             </>
           )}
 
-          {error && <p className="text-[14px] text-clay-600">{error}</p>}
+          {error && <p className="text-[14px] text-mark-600">{error}</p>}
 
           <button type="submit" disabled={submitting} className="btn-primary w-full disabled:opacity-60">
             {submitting ? 'Секунду…' : mode === 'login' ? 'Войти' : 'Зарегистрироваться'}

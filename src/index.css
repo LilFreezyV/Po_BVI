@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Тема «тетрадь и чертёж» — общая для всего сайта (раскатана с лендинга 2026-10-21).
+   Принципы: бумага вместо карточек с тенями, волосяные линии вместо рамок-«плашек»,
+   serif для крупных утверждений, mono для всех чисел, чернильно-синий pen вместо
+   зелёного brand, красные чернила mark вместо терракоты. */
+
 @layer base {
   html {
     scroll-behavior: smooth;
@@ -11,10 +16,17 @@
     font-feature-settings: 'ss01' on, 'cv11' on;
   }
   ::selection {
-    @apply bg-brand-100 text-brand-800;
+    @apply bg-pen-100 text-pen-800;
   }
   h1, h2, h3 {
     @apply tracking-[-0.02em];
+  }
+  h1, h2 {
+    @apply font-serif;
+  }
+  /* Цифры везде одним шрифтом — как в тетради на полях */
+  .tabular-nums, time, output {
+    @apply font-mono;
   }
 }
 
@@ -22,28 +34,49 @@
   .container-x {
     @apply mx-auto w-full max-w-content px-5 sm:px-8;
   }
+
+  /* Лист бумаги: без теней и скруглений-«пилюль», только волосяная линия */
   .card {
-    @apply rounded-2xl border border-line bg-white shadow-card;
+    @apply rounded-lg border border-line bg-white;
   }
+  /* Лист с полями: красная вертикаль слева, как в тетради */
+  .sheet-ruled {
+    @apply card relative overflow-hidden;
+  }
+  .sheet-ruled::before {
+    content: '';
+    @apply absolute inset-y-0 left-0 w-px bg-mark-100;
+    left: 2.25rem;
+  }
+
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-[15px] font-semibold transition
-           focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-[15px] font-semibold transition
+           focus:outline-none focus-visible:ring-2 focus-visible:ring-pen-400 focus-visible:ring-offset-2;
   }
   .btn-primary {
-    @apply btn bg-brand-700 text-white hover:bg-brand-800 active:bg-brand-900;
+    @apply btn bg-pen-700 text-white hover:bg-pen-800 active:bg-pen-900;
   }
   .btn-secondary {
-    @apply btn border border-line bg-white text-ink-900 hover:border-ink-300 hover:bg-white;
+    @apply btn border border-line bg-white text-ink-900 hover:border-pen-300 hover:text-pen-700;
   }
   .btn-ghost {
-    @apply btn text-ink-700 hover:bg-brand-50;
+    @apply btn text-ink-700 hover:bg-pen-50;
   }
+
+  /* Пометка на полях: прямоугольная, не «таблетка» — иначе выглядит как типовой EdTech */
   .chip {
-    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold;
+    @apply inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em];
   }
+
+  /* Нумерация раздела: «§ как это работает» моноширинным */
   .eyebrow {
-    @apply text-xs font-bold uppercase tracking-[0.14em] text-brand-500;
+    @apply font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-pen-500;
   }
+  .eyebrow::before {
+    content: '§ ';
+    @apply text-pen-300;
+  }
+
   .prose-note p {
     @apply mb-3 leading-relaxed text-ink-700;
   }
@@ -52,7 +85,7 @@
   }
 }
 
-/* Тонкая «миллиметровка» для геройского блока — вместо кричащего градиента */
+/* Тонкая «миллиметровка» для шапок страниц — вместо кричащего градиента */
 .grid-paper {
   background-image:
     linear-gradient(to right, rgba(15, 19, 23, 0.045) 1px, transparent 1px),
@@ -60,4 +93,12 @@
   background-size: 28px 28px;
   -webkit-mask-image: radial-gradient(120% 80% at 50% 0%, #000 20%, transparent 78%);
   mask-image: radial-gradient(120% 80% at 50% 0%, #000 20%, transparent 78%);
+}
+
+/* Линованная бумага для шапок внутренних страниц: горизонтальные строки тетради */
+.ruled-paper {
+  background-image: linear-gradient(to bottom, rgba(30, 44, 79, 0.07) 1px, transparent 1px);
+  background-size: 100% 2rem;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 85%);
+  mask-image: linear-gradient(to bottom, #000 0%, transparent 85%);
 }

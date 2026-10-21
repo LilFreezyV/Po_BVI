@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { listOlympiads, listUniversities } from '../lib/api.js'
 import { useAsync } from '../lib/useAsync.js'
 import { SUBJECT_LABELS } from '../lib/subjects.js'
-import { Chip, Icon, navigate } from '../components/ui.jsx'
+import { Chip, Icon, SkeletonCards, navigate } from '../components/ui.jsx'
 
 const TABS = [
   { id: 'olympiads', label: 'Олимпиады' },
@@ -17,7 +17,7 @@ function OlympiadCard({ o }) {
           <h3 className="text-[20px] font-bold">{o.title}</h3>
           <p className="mt-1 text-[14px] text-ink-400">{o.organizer}</p>
         </div>
-        <Chip className={o.level === 'Всероссийская' ? 'bg-clay-50 text-clay-600' : 'bg-brand-50 text-brand-700'}>
+        <Chip className={o.level === 'Всероссийская' ? 'bg-mark-50 text-mark-600' : 'bg-pen-50 text-pen-700'}>
           {o.level}
         </Chip>
       </div>
@@ -37,9 +37,9 @@ function OlympiadCard({ o }) {
         </div>
       </dl>
 
-      <div className="mt-5 flex gap-3 rounded-xl bg-brand-50 p-4">
-        <Icon name="target" className="mt-0.5 h-5 w-5 shrink-0 text-brand-600" />
-        <p className="text-[15px] leading-relaxed text-brand-800">{o.perk}</p>
+      <div className="mt-5 flex gap-3 rounded-xl bg-pen-50 p-4">
+        <Icon name="target" className="mt-0.5 h-5 w-5 shrink-0 text-pen-600" />
+        <p className="text-[15px] leading-relaxed text-pen-800">{o.perk}</p>
       </div>
 
       <p className="mt-4 text-[14px] leading-relaxed text-ink-400">{o.note}</p>
@@ -51,7 +51,7 @@ function UniversityCard({ u }) {
   return (
     <article className="card p-6">
       <div className="flex items-start gap-4">
-        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-brand-700 text-[13px] font-extrabold text-white">
+        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-pen-700 text-[13px] font-extrabold text-white">
           {u.short}
         </span>
         <div className="min-w-0">
@@ -99,10 +99,11 @@ export default function Base() {
   const error = olympiadsError || universitiesError
 
   return (
-    <div className="container-x py-10 lg:py-14">
+    <div className="container-x relative py-10 lg:py-14">
+      <div className="ruled-paper pointer-events-none absolute inset-x-0 top-0 h-56 -z-10" />
       <div className="max-w-3xl">
         <p className="eyebrow mb-3">База олимпиад и вузов</p>
-        <h1 className="text-[32px] font-extrabold leading-tight sm:text-[42px]">
+        <h1 className="font-serif text-[32px] font-semibold leading-tight sm:text-[40px]">
           Какая олимпиада даёт БВИ в какой вуз
         </h1>
         <p className="mt-4 text-[17px] leading-relaxed text-ink-500">
@@ -117,7 +118,7 @@ export default function Base() {
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`rounded-lg px-4 py-2 text-[14px] font-semibold transition ${
-              tab === t.id ? 'bg-brand-700 text-white' : 'text-ink-500 hover:text-ink-900'
+              tab === t.id ? 'bg-pen-700 text-white' : 'text-ink-500 hover:text-ink-900'
             }`}
           >
             {t.label}
@@ -125,7 +126,7 @@ export default function Base() {
         ))}
       </div>
 
-      {loading && <p className="py-16 text-center text-ink-400">Загружаем базу…</p>}
+      {loading && <div className="mt-6"><SkeletonCards count={4} columns="lg:grid-cols-2" /></div>}
       {error && !loading && (
         <p className="py-16 text-center text-ink-400">
           Не удалось загрузить данные. Проверьте, что бэкенд запущен.

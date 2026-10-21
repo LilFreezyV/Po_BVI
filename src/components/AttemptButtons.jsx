@@ -4,12 +4,12 @@ import { Icon, navigate } from './ui.jsx'
 
 // Стили статусов задачи — общие для карточек задач и кнопок.
 export const ATTEMPT_CARD = {
-  solved: 'border-brand-200 bg-brand-50/40',
+  solved: 'border-pen-200 bg-pen-50/40',
   question: 'border-amber-100 bg-amber-50/50',
 }
 
 const BUTTONS = [
-  { id: 'solved', label: 'Решена', icon: 'check', active: 'border-brand-600 bg-brand-600 text-white' },
+  { id: 'solved', label: 'Решена', icon: 'check', active: 'border-pen-600 bg-pen-600 text-white' },
   { id: 'question', label: 'Есть вопросы', icon: 'spark', active: 'border-amber-600 bg-amber-600 text-white' },
 ]
 
@@ -62,7 +62,7 @@ export default function AttemptButtons({ status, onChange }) {
           </button>
         )
       })}
-      {error && <span className="text-[12px] text-clay-600">{error}</span>}
+      {error && <span className="text-[12px] text-mark-600">{error}</span>}
     </div>
   )
 }

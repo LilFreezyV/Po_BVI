@@ -1,187 +1,23 @@
-import React, { useEffect, useState } from 'react'
-import { AUDIENCE, STEPS } from '../data/site.js'
+import React, { useEffect, useRef, useState } from 'react'
+import { AnimatePresence, motion, useAnimationFrame, useInView, useReducedMotion } from 'framer-motion'
+import { AUDIENCE } from '../data/site.js'
 import { listOlympiads, listPlans, listSections, listTopics, listUniversities } from '../lib/api.js'
 import { useAsync } from '../lib/useAsync.js'
-import { Chip, Icon, Link, navigate } from '../components/ui.jsx'
+import { Icon, Link, navigate } from '../components/ui.jsx'
+import { CountUp, DrawnUnderline, EASE, Reveal, ScrollLine, Stagger, staggerItem, useParallax } from '../components/motion.jsx'
 
-// Локальный заголовок секции для лендинга — серифовый, с «§»-пометкой вместо
-// обычного eyebrow. Не трогаем общий SectionHeading из ui.jsx: он используется
-// на других страницах, которые пока не редизайним.
-function Heading({ eyebrow, title, text, align = 'left' }) {
-  return (
-    <div className={align === 'center' ? 'mx-auto max-w-2xl text-center' : 'max-w-2xl'}>
-      {eyebrow && (
-        <p className="mb-3 font-mono text-[12px] font-medium uppercase tracking-[0.08em] text-pen-500">
-          § {eyebrow}
-        </p>
-      )}
-      <h2 className="font-serif text-[30px] font-medium leading-[1.15] sm:text-[38px]">{title}</h2>
-      {text && <p className="mt-4 text-[17px] leading-relaxed text-ink-500">{text}</p>}
-    </div>
-  )
-}
-
-function FormulaTexture() {
-  return (
-    <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
-      <div className="grid-paper absolute inset-0" />
-      <svg
-        className="absolute right-[8%] top-[14%] h-20 w-20 text-pen-200/70 sm:h-24 sm:w-24"
-        viewBox="0 0 64 64"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.4"
-      >
-        <path d="M6 46 Q 22 10 58 18" strokeLinecap="round" />
-        <path d="M46 10 L58 18 L48 26" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-      <span className="absolute left-[3%] top-[48%] hidden select-none font-serif text-[88px] italic leading-none text-pen-100/80 sm:block">
-        ∫
-      </span>
-      <span className="absolute right-[6%] bottom-[10%] hidden select-none font-mono text-[15px] text-pen-300/80 sm:block">
-        v² = v₀² + 2as
-      </span>
-      <span className="absolute left-[8%] bottom-[16%] select-none font-mono text-[13px] text-pen-300/70 sm:left-[18%]">
-        §1.1
-      </span>
-    </div>
-  )
-}
-
-function MarkedWord({ children }) {
-  return (
-    <span className="relative whitespace-nowrap">
-      <span className="relative z-10">{children}</span>
-      <svg
-        className="absolute inset-x-0 -bottom-1 h-[10px] w-full"
-        viewBox="0 0 100 10"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-      >
-        <path
-          d="M1 6.5 Q 16 2 31 6 T 61 5.5 T 99 4.5"
-          fill="none"
-          stroke="#B23A2A"
-          strokeWidth="2.6"
-          strokeLinecap="round"
-        />
-      </svg>
-    </span>
-  )
-}
-
-function Hero({ stats, olympiads }) {
-  return (
-    <section className="relative overflow-hidden">
-      <FormulaTexture />
-      <div className="container-x grid items-center gap-12 pb-16 pt-14 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:pb-24 lg:pt-20">
-        <div>
-          <span className="chip border border-pen-100 bg-pen-50 font-mono text-[11px] font-medium text-pen-700">
-            § Физика и математика · 10–11 класс
-          </span>
-
-          <h1 className="mt-6 font-serif text-[40px] font-medium leading-[1.08] sm:text-[54px] lg:text-[60px]">
-            База вузов — получи своё <MarkedWord>БВИ</MarkedWord> в вуз мечты
-          </h1>
-
-          <p className="mt-6 max-w-xl text-[18px] leading-relaxed text-ink-500">
-            Перечневая олимпиада — самый короткий путь в МФТИ, ВШЭ или ИТМО: диплом призёра даёт поступление без
-            вступительных испытаний. Мы показываем, какая олимпиада что даёт, и ведём по темам: конспект теории → задачи
-            трёх уровней → прогресс.
-          </p>
-
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <button className="btn-primary bg-pen-700 hover:bg-pen-800 active:bg-pen-900" onClick={() => navigate('/catalog')}>
-              Начать подготовку
-              <Icon name="arrow" className="h-[18px] w-[18px]" />
-            </button>
-            <button className="btn-secondary" onClick={() => navigate('/base')}>
-              Посмотреть базу вузов
-            </button>
-          </div>
-
-          <p className="mt-4 text-sm text-ink-400">
-            Без входного тестирования. База олимпиад и вузов доступна бесплатно.
-          </p>
-
-          <dl className="mt-10 grid max-w-xl grid-cols-2 gap-x-6 gap-y-6 border-t border-line pt-8 sm:grid-cols-4">
-            {stats.map((s) => (
-              <div key={s.label}>
-                <dt className="font-mono text-[26px] font-medium leading-none text-pen-700">{s.value}</dt>
-                <dd className="mt-2 text-[13px] leading-snug text-ink-400">{s.label}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-
-        <HeroCard olympiads={olympiads} />
-      </div>
-    </section>
-  )
-}
-
-function HeroCard({ olympiads }) {
-  return (
-    <div className="flex flex-col">
-      <div className="overflow-hidden rounded-lg border border-line bg-white shadow-lift">
-        <div className="flex items-center justify-between border-b border-line px-5 py-4">
-          <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-400">§1.3 Механика</p>
-            <p className="mt-1 font-serif text-[18px] font-medium">Импульс и столкновения</p>
-          </div>
-          <Chip className="bg-pen-50 text-pen-700">Физтех · Росатом</Chip>
-        </div>
-
-        <div className="space-y-4 px-5 py-5">
-          <div className="rounded-md bg-paper p-4">
-            <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-400">Конспект</p>
-            <p className="mt-2 text-[14px] leading-relaxed text-ink-700">
-              Импульс сохраняется, когда внешние силы пренебрежимо малы за время удара. Приём олимпиад — перейти в
-              систему центра масс: там суммарный импульс равен нулю.
-            </p>
-          </div>
-
-          {[
-            { title: 'Лёгкий', done: 2, total: 2, cls: 'bg-pen-500' },
-            { title: 'Средний', done: 2, total: 2, cls: 'bg-amber-600' },
-            { title: 'Сложный', done: 0, total: 2, cls: 'bg-mark-500' },
-          ].map((lvl) => (
-            <div key={lvl.title} className="flex items-center gap-4">
-              <span className="w-20 shrink-0 text-[13px] font-semibold text-ink-700">{lvl.title}</span>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-ink-900/[0.07]">
-                <div
-                  className={`h-1.5 rounded-full ${lvl.cls}`}
-                  style={{ width: `${(lvl.done / lvl.total) * 100}%` }}
-                />
-              </div>
-              <span className="w-10 shrink-0 text-right font-mono text-[13px] tabular-nums text-ink-400">
-                {lvl.done}/{lvl.total}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-3 border-t border-line bg-paper px-5 py-4">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-pen-700 text-white">
-            <Icon name="spark" className="h-4 w-4" />
-          </span>
-          <p className="text-[13px] leading-snug text-ink-500">
-            «Подбери 5 задач уровня отбора Физтеха» — ИИ-помощник соберёт подборку и проверит ваше решение
-          </p>
-        </div>
-      </div>
-
-      <PhystechCountdown olympiad={olympiads.find((o) => o.id === 'phystech')} />
-    </div>
-  )
-}
+/* Лендинг переписан 2026-10-21: моушен-дизайн как основа подачи.
+   Идея: страница ведёт себя как решение задачи на бумаге — сначала чертёж траектории,
+   потом по шагам разбор, в конце ответ. Всё движение завязано на прокрутку, ничего не
+   мигает само по себе; при системной настройке «уменьшить движение» анимации выключаются
+   (см. components/motion.jsx). */
 
 const MSK = 'Europe/Moscow'
-const mskDay = new Intl.DateTimeFormat('en-CA', { timeZone: MSK, year: 'numeric', month: '2-digit', day: '2-digit' })
+const mskDay = new Intl.DateTimeFormat('en-CA', { timeZone: MSK })
 const mskDate = new Intl.DateTimeFormat('ru-RU', { timeZone: MSK, day: 'numeric', month: 'long' })
 const mskTime = new Intl.DateTimeFormat('ru-RU', { timeZone: MSK, hour: 'numeric', minute: '2-digit' })
-
-const daysUntil = (now, date) => Math.round((Date.parse(mskDay.format(date)) - Date.parse(mskDay.format(now))) / 86400000)
+const daysUntil = (now, date) =>
+  Math.round((Date.parse(mskDay.format(date)) - Date.parse(mskDay.format(now))) / 86400000)
 
 const daysWord = (n) => {
   const mod10 = n % 10
@@ -200,15 +36,180 @@ function useNow(intervalMs = 60000) {
   return now
 }
 
-function nextStage(stages, subject, now) {
-  return stages
+const nextStage = (stages, subject, now) =>
+  stages
     .filter((s) => s.subject === subject)
     .map((s) => ({ ...s, date: new Date(s.starts_at) }))
     .find((s) => s.date > now)
+
+/* ——— Хиро: один чертёж, который перетекает из темы в тему ———
+   Кривая непрерывно превращается: парабола броска → окружность → синусоида колебаний →
+   спираль заряда в магнитном поле. По кривой бежит тело, за ним тянется след, рядом
+   подписывается тема и её формула. Все четыре фигуры — реальные темы нашей программы.
+
+   Морфинг считаем сами по точкам (а не анимацией атрибута d): так кривые гарантированно
+   совпадают по числу узлов и переход получается без рывков. */
+
+const FIGURE_POINTS = 180
+const HOLD_MS = 3200 // сколько держим фигуру
+const MORPH_MS = 1400 // сколько длится превращение
+
+const FIGURES = [
+  {
+    id: 'ballistics',
+    topic: 'Бросок под углом к горизонту',
+    formula: 'h = v₀² sin²α / 2g',
+    point: (t) => ({ x: 40 + 620 * t, y: 300 - 4 * 230 * t * (1 - t) }),
+  },
+  {
+    id: 'circle',
+    topic: 'Движение по окружности',
+    formula: 'a = v² / R',
+    point: (t) => ({ x: 350 + 118 * Math.cos(2 * Math.PI * t - Math.PI), y: 170 + 118 * Math.sin(2 * Math.PI * t - Math.PI) }),
+  },
+  {
+    id: 'oscillation',
+    topic: 'Механические колебания',
+    formula: 'x = A sin(ωt + φ)',
+    point: (t) => ({ x: 40 + 620 * t, y: 170 - 105 * Math.sin(4 * Math.PI * t) }),
+  },
+  {
+    id: 'magnetic',
+    topic: 'Частица в магнитном поле',
+    formula: 'R = mv / qB',
+    point: (t) => {
+      const turns = 3.4
+      const angle = 2 * Math.PI * turns * t
+      const radius = 24 + 104 * t
+      return { x: 350 + radius * Math.cos(angle), y: 170 + radius * Math.sin(angle) * 0.82 }
+    },
+  },
+]
+
+const samples = FIGURES.map((f) => Array.from({ length: FIGURE_POINTS }, (_, i) => f.point(i / (FIGURE_POINTS - 1))))
+
+const toPath = (points) =>
+  points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')
+
+const easeInOut = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2)
+
+function HeroFigure() {
+  const reduce = useReducedMotion()
+  const wrapRef = useRef(null)
+  const inView = useInView(wrapRef, { once: false, margin: '-40px' })
+
+  const pathRef = useRef(null)
+  const trailRef = useRef(null)
+  const bodyRef = useRef(null)
+  const startedAt = useRef(null)
+  const [figure, setFigure] = useState(0)
+
+  useAnimationFrame((time) => {
+    if (reduce || !inView || !pathRef.current) return
+    if (startedAt.current === null) startedAt.current = time
+    const elapsed = time - startedAt.current
+
+    // какая фигура сейчас и насколько она «перетекла» в следующую
+    const cycle = HOLD_MS + MORPH_MS
+    const index = Math.floor(elapsed / cycle) % FIGURES.length
+    const inCycle = elapsed % cycle
+    const morph = inCycle <= HOLD_MS ? 0 : easeInOut((inCycle - HOLD_MS) / MORPH_MS)
+
+    const from = samples[index]
+    const to = samples[(index + 1) % FIGURES.length]
+    const points = from.map((p, i) => ({
+      x: p.x + (to[i].x - p.x) * morph,
+      y: p.y + (to[i].y - p.y) * morph,
+    }))
+
+    pathRef.current.setAttribute('d', toPath(points))
+
+    // тело бежит по кривой, за ним — короткий след
+    const u = (elapsed / 2600) % 1
+    const head = Math.min(FIGURE_POINTS - 1, Math.floor(u * (FIGURE_POINTS - 1)))
+    const body = points[head]
+    if (bodyRef.current) {
+      bodyRef.current.setAttribute('cx', body.x.toFixed(1))
+      bodyRef.current.setAttribute('cy', body.y.toFixed(1))
+    }
+    if (trailRef.current) {
+      const tailStart = Math.max(0, head - 26)
+      trailRef.current.setAttribute('d', toPath(points.slice(tailStart, head + 1)))
+    }
+
+    if (index !== figure) setFigure(index)
+  })
+
+  const current = FIGURES[figure]
+
+  return (
+    <div ref={wrapRef} className="relative h-full w-full">
+      <svg viewBox="0 0 700 340" fill="none" className="h-full w-full" aria-label={`Чертёж: ${current.topic}`}>
+        {/* ось */}
+        <line x1="0" y1="300" x2="700" y2="300" stroke="#1E2C4F" strokeOpacity="0.18" strokeWidth="1.5" />
+
+        {/* сама кривая */}
+        <motion.path
+          ref={pathRef}
+          d={toPath(samples[0])}
+          stroke="#1E2C4F"
+          strokeOpacity="0.55"
+          strokeWidth="2.1"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          initial={reduce ? false : { pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 1.6, ease: EASE, delay: 0.3 }}
+        />
+
+        {/* след за телом */}
+        {!reduce && (
+          <path ref={trailRef} stroke="#B23A2A" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+        )}
+
+        {/* тело */}
+        {!reduce && <circle ref={bodyRef} r="6.5" fill="#1E2C4F" cx={samples[0][0].x} cy={samples[0][0].y} />}
+      </svg>
+
+      {/* подпись темы — меняется вместе с фигурой */}
+      <div className="pointer-events-none absolute left-0 top-0">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={current.id}
+            initial={reduce ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduce ? {} : { opacity: 0, y: -8 }}
+            transition={{ duration: 0.4, ease: EASE }}
+          >
+            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-pen-300">§ тема программы</p>
+            <p className="mt-1 text-[14px] font-bold text-ink-900">{current.topic}</p>
+            <p className="mt-0.5 font-mono text-[13px] text-mark-500">{current.formula}</p>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </div>
+  )
 }
 
-function PhystechCountdown({ olympiad }) {
+function HeroWords({ text, delay = 0 }) {
+  const reduce = useReducedMotion()
+  if (reduce) return <>{text}</>
+  return text.split(' ').map((word, i) => (
+    <motion.span
+      key={`${word}-${i}`}
+      className="inline-block"
+      initial={{ opacity: 0, y: '0.4em' }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: EASE, delay: delay + i * 0.06 }}
+    >
+      {word}&nbsp;
+    </motion.span>
+  ))
+}
+
+function Countdown({ olympiads }) {
   const now = useNow()
+  const olympiad = olympiads.find((o) => (o.stages || []).length > 0)
   if (!olympiad) return null
   const rows = [
     ['physics', 'Физика'],
@@ -219,208 +220,416 @@ function PhystechCountdown({ olympiad }) {
   if (rows.length === 0) return null
 
   return (
-    <div className="mt-4 flex w-full gap-3 rounded-lg border border-line bg-white p-4 sm:w-auto sm:self-start">
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-mark-50 text-mark-500">
-        <Icon name="target" />
-      </span>
-      <div className="min-w-0">
-        <p className="text-[13px] font-bold leading-tight">Олимпиада «Физтех»</p>
-        <ul className="mt-2 space-y-2">
-          {rows.map(({ label, stage }) => {
-            const days = daysUntil(now, stage.date)
-            const when = days === 0 ? 'сегодня' : days === 1 ? 'завтра' : `через ${days} ${daysWord(days)}`
-            const time = mskTime.format(stage.date)
-            return (
-              <li key={label} className="text-[13px] leading-snug">
-                <p className="text-ink-700">
-                  <span className="font-semibold">{label}</span> · {stage.title.toLowerCase()}
-                  {stage.note && <span className="text-ink-400"> ({stage.note})</span>}
-                </p>
-                <p className="font-mono text-ink-400">
-                  <span className="text-mark-600">{when}</span>
-                  {' · '}
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: EASE, delay: 1.2 }}
+      className="card w-full max-w-sm p-5"
+    >
+      <p className="eyebrow mb-3">ближайший этап</p>
+      <p className="font-serif text-[20px] font-semibold leading-tight">Олимпиада «{olympiad.title}»</p>
+      <ul className="mt-4 space-y-3">
+        {rows.map(({ label, stage }) => {
+          const days = daysUntil(now, stage.date)
+          const time = mskTime.format(stage.date)
+          return (
+            <li key={label} className="flex items-baseline gap-3">
+              <span className="font-mono text-[28px] font-semibold leading-none text-mark-500 tabular-nums">
+                {days}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[13px] font-semibold text-ink-900">
+                  {daysWord(days)} до «{label.toLowerCase()}»
+                </span>
+                <span className="block font-mono text-[12px] text-ink-400">
                   {mskDate.format(stage.date)}
                   {time !== '0:00' && time !== '00:00' ? `, ${time} МСК` : ''}
-                </p>
-              </li>
-            )
-          })}
-        </ul>
-      </div>
-    </div>
+                </span>
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+    </motion.div>
   )
 }
+
+function Hero({ stats, olympiads, loading }) {
+  const ref = useRef(null)
+  const y = useParallax(ref, 80)
+
+  return (
+    <section ref={ref} className="relative overflow-hidden border-b border-line">
+      <motion.div style={{ y }} className="grid-paper pointer-events-none absolute inset-0 -z-10" />
+
+      <div className="container-x pb-14 pt-12 lg:pb-20 lg:pt-16">
+        <motion.p
+          className="eyebrow"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, ease: EASE }}
+        >
+          физика и математика · 9–11 класс
+        </motion.p>
+
+        <h1 className="mt-5 max-w-4xl font-serif text-[40px] font-semibold leading-[1.05] sm:text-[58px] lg:text-[68px]">
+          <HeroWords text="Поступи в вуз мечты" delay={0.15} />
+          <br className="hidden sm:block" />
+          <motion.span
+            className="inline-block"
+            initial={{ opacity: 0, y: '0.4em' }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: EASE, delay: 0.45 }}
+          >
+            <DrawnUnderline delay={1}>без экзаменов</DrawnUnderline>
+          </motion.span>
+        </h1>
+
+        <motion.p
+          className="mt-6 max-w-xl text-[18px] leading-relaxed text-ink-500"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: EASE, delay: 0.6 }}
+        >
+          Диплом перечневой олимпиады даёт БВИ — зачисление без вступительных испытаний. Показываем, какая олимпиада
+          что даёт, и ведём по программе: тема → конспект → задачи → разбор.
+        </motion.p>
+
+        <motion.div
+          className="mt-8 flex flex-col gap-3 sm:flex-row"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: EASE, delay: 0.75 }}
+        >
+          <motion.button
+            className="btn-primary"
+            onClick={() => navigate('/program')}
+            whileHover={{ x: 2 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ duration: 0.2 }}
+          >
+            Открыть программу
+            <Icon name="arrow" className="h-[18px] w-[18px]" />
+          </motion.button>
+          <motion.button
+            className="btn-secondary"
+            onClick={() => navigate('/base')}
+            whileHover={{ x: 2 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ duration: 0.2 }}
+          >
+            Какая олимпиада даёт БВИ
+          </motion.button>
+        </motion.div>
+
+        <div className="mt-12 grid items-end gap-10 lg:grid-cols-[1fr_380px]">
+          {/* чертёж */}
+          <motion.div
+            className="order-2 h-[220px] sm:h-[280px] lg:order-1"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+          >
+            <HeroFigure />
+          </motion.div>
+
+          <div className="order-1 lg:order-2">
+            <Countdown olympiads={olympiads} />
+          </div>
+        </div>
+
+        {/* цифры */}
+        <dl className="mt-12 grid grid-cols-2 gap-x-6 gap-y-8 border-t border-line pt-8 sm:grid-cols-4">
+          {stats.map((s, i) => (
+            <motion.div
+              key={s.label}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: EASE, delay: 0.9 + i * 0.08 }}
+            >
+              <dt className="font-mono text-[30px] font-semibold leading-none text-pen-700 tabular-nums">
+                {loading ? <span className="text-ink-300">—</span> : <CountUp value={s.value} />}
+              </dt>
+              <dd className="mt-2 text-[13px] leading-snug text-ink-400">{s.label}</dd>
+            </motion.div>
+          ))}
+        </dl>
+      </div>
+    </section>
+  )
+}
+
+/* ——— Маршрут: линия, которая чертится по мере прокрутки ——— */
+
+const ROUTE = [
+  { n: '01', title: 'Выбираете цель', text: 'База вузов: какая олимпиада даёт БВИ в МФТИ, ВШЭ или ИТМО и что для этого нужно.' },
+  { n: '02', title: 'Открываете тему', text: 'Программа по физике и математике — в порядке прохождения, без входных тестов.' },
+  { n: '03', title: 'Читаете конспект', text: 'Короткая выжимка: идея, ключевые формулы, типичные ошибки.' },
+  { n: '04', title: 'Решаете три уровня', text: 'От техники до задач заключительных этапов прошлых лет — с ответами.' },
+  { n: '05', title: 'Видите прогресс', text: 'Отмечаете решённое, в кабинете видно, где пробелы.' },
+]
+
+function Route() {
+  const ref = useRef(null)
+  return (
+    <section className="border-b border-line bg-white">
+      <div className="container-x py-16 lg:py-24">
+        <Reveal>
+          <p className="eyebrow mb-3">как это работает</p>
+          <h2 className="max-w-2xl font-serif text-[30px] font-semibold leading-tight sm:text-[38px]">
+            Маршрут от «не знаю, с чего начать» до диплома
+          </h2>
+        </Reveal>
+
+        <div ref={ref} className="relative mt-12 pl-10 sm:pl-14">
+          {/* направляющая и линия, которая прочерчивается при прокрутке */}
+          <div className="absolute left-[15px] top-2 h-[calc(100%-1rem)] w-px bg-line sm:left-[23px]" />
+          <ScrollLine targetRef={ref} className="absolute left-[15px] top-2 h-[calc(100%-1rem)] w-px bg-pen-700 sm:left-[23px]" />
+
+          <Stagger className="space-y-10" step={0.1}>
+            {ROUTE.map((step) => (
+              <motion.div key={step.n} variants={staggerItem} className="relative">
+                <span className="absolute -left-10 top-0 grid h-8 w-8 place-items-center rounded-full border border-line bg-white font-mono text-[12px] font-semibold text-pen-700 sm:-left-14 sm:h-12 sm:w-12 sm:text-[14px]">
+                  {step.n}
+                </span>
+                <h3 className="text-[18px] font-bold leading-snug">{step.title}</h3>
+                <p className="mt-1.5 max-w-xl text-[15px] leading-relaxed text-ink-500">{step.text}</p>
+              </motion.div>
+            ))}
+          </Stagger>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ——— Живой пример задачи: подсказка раскрывается с анимацией ——— */
+
+function TaskDemo() {
+  const [open, setOpen] = useState(false)
+  return (
+    <section className="border-b border-line">
+      <div className="container-x grid gap-10 py-16 lg:grid-cols-2 lg:items-center lg:py-24">
+        <Reveal>
+          <p className="eyebrow mb-3">как выглядит задача</p>
+          <h2 className="font-serif text-[30px] font-semibold leading-tight sm:text-[38px]">
+            Условие, рисунок, ответ — и ни одного лишнего клика
+          </h2>
+          <p className="mt-5 max-w-lg text-[17px] leading-relaxed text-ink-500">
+            Задачи привязаны к теме программы и к олимпиаде, на которой встречались. Ответ открывается по кнопке —
+            сначала решайте сами.
+          </p>
+          <Link
+            to="/program"
+            className="mt-6 inline-flex items-center gap-2 text-[15px] font-semibold text-pen-700 hover:text-pen-900"
+          >
+            Все задачи по темам
+            <Icon name="arrow" className="h-4 w-4" />
+          </Link>
+        </Reveal>
+
+        <Reveal delay={0.1}>
+          <div className="card p-5 sm:p-6">
+            <div className="flex items-start gap-3">
+              <span className="shrink-0 rounded bg-paper px-1.5 py-0.5 font-mono text-[12px] font-bold text-ink-500">
+                №1.3.5
+              </span>
+              <p className="text-[15px] leading-relaxed">
+                Спортсмен толкает ядро под углом 45° к горизонту со скоростью 20 м/с. Через какое время после толчка
+                угол наклона скорости к горизонту уменьшится до 30°?
+              </p>
+            </div>
+
+            <button
+              onClick={() => setOpen((v) => !v)}
+              className="mt-4 inline-flex items-center gap-1.5 text-[13px] font-semibold text-pen-700 hover:text-pen-900"
+            >
+              {open ? 'Скрыть ответ' : 'Показать ответ'}
+              <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.25, ease: EASE }}>
+                <Icon name="chevronDown" className="h-4 w-4" />
+              </motion.span>
+            </button>
+
+            <AnimatePresence initial={false}>
+              {open && (
+                <motion.div
+                  key="answer"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.35, ease: EASE }}
+                  className="overflow-hidden"
+                >
+                  <p className="mt-3 rounded-lg bg-paper p-4 font-mono text-[14px] leading-relaxed text-ink-700">
+                    t ≃ 0,61 с
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <p className="mt-4 border-t border-line pt-3 text-[12px] leading-relaxed text-ink-400">
+              Савченко О. Я., Балдин Е. М. «Сборник задач по физике», 2003 · GNU FDL
+            </p>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  )
+}
+
+/* ——— Для кого ——— */
 
 function Audience() {
   return (
-    <section className="container-x py-16 lg:py-24">
-      <Heading
-        eyebrow="Для кого это"
-        title="Два пути к БВИ — и оба начинаются здесь"
-        text="Неважно, решали вы олимпиадные задачи три года или открываете их впервые: структура одна, точка входа разная."
-      />
-
-      <div className="mt-10 grid gap-5 md:grid-cols-2">
-        {AUDIENCE.map((a) => (
-          <article key={a.id} className="flex flex-col rounded-lg border border-line bg-white p-6 sm:p-8">
-            <Chip className="self-start border border-line bg-paper text-ink-500">{a.tag}</Chip>
-            <h3 className="mt-4 font-serif text-[22px] font-medium leading-snug">{a.title}</h3>
-
-            <ul className="mt-5 space-y-3">
-              {a.pains.map((p) => (
-                <li key={p} className="flex gap-3 text-[15px] leading-relaxed text-ink-500">
-                  <span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-ink-300" />
-                  {p}
-                </li>
-              ))}
-            </ul>
-
-            <div className="mt-6 flex gap-3 rounded-md bg-pen-50 p-4">
-              <Icon name="check" className="mt-0.5 h-5 w-5 shrink-0 text-pen-600" />
-              <p className="text-[15px] leading-relaxed text-pen-800">{a.gets}</p>
-            </div>
-
-            <Link
-              to="/catalog"
-              className="mt-6 inline-flex items-center gap-2 text-[15px] font-semibold text-pen-700 hover:text-pen-900"
-            >
-              Открыть каталог тем
-              <Icon name="arrow" className="h-4 w-4" />
-            </Link>
-          </article>
-        ))}
-      </div>
-    </section>
-  )
-}
-
-function HowItWorks() {
-  return (
-    <section className="border-y border-line bg-white">
+    <section className="border-b border-line bg-white">
       <div className="container-x py-16 lg:py-24">
-        <Heading
-          eyebrow="Как это работает"
-          title="Никакого входного теста — понятный маршрут"
-          text="Вы всегда видите, где находитесь: какая тема, какой уровень задач и сколько осталось до цели."
-        />
+        <Reveal>
+          <p className="eyebrow mb-3">для кого это</p>
+          <h2 className="max-w-2xl font-serif text-[30px] font-semibold leading-tight sm:text-[38px]">
+            Два пути к БВИ — и оба начинаются здесь
+          </h2>
+        </Reveal>
 
-        <ol className="mt-12 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-5">
-          {STEPS.map((step, i) => (
-            <li key={step.n} className="relative">
-              <div className="flex items-center gap-3">
-                <span className="font-mono text-[15px] font-medium text-mark-500">{step.n}</span>
-                {i < STEPS.length - 1 && <span className="hidden h-px flex-1 bg-line lg:block" />}
+        <Stagger className="mt-10 grid gap-5 md:grid-cols-2" step={0.12}>
+          {AUDIENCE.map((a) => (
+            <motion.article
+              key={a.id}
+              variants={staggerItem}
+              whileHover={{ y: -4 }}
+              transition={{ duration: 0.25, ease: EASE }}
+              className="card flex flex-col p-6 sm:p-7"
+            >
+              <span className="chip self-start border border-line bg-paper text-ink-500">{a.tag}</span>
+              <h3 className="mt-4 text-[20px] font-bold leading-snug">{a.title}</h3>
+              <ul className="mt-5 space-y-3">
+                {a.pains.map((p) => (
+                  <li key={p} className="flex gap-3 text-[15px] leading-relaxed text-ink-500">
+                    <span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-ink-300" />
+                    {p}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-6 flex gap-3 rounded-lg bg-pen-50 p-4">
+                <Icon name="check" className="mt-0.5 h-5 w-5 shrink-0 text-pen-600" />
+                <p className="text-[15px] leading-relaxed text-pen-800">{a.gets}</p>
               </div>
-              <h3 className="mt-3 font-serif text-[18px] font-medium leading-snug">{step.title}</h3>
-              <p className="mt-2 text-[15px] leading-relaxed text-ink-500">{step.text}</p>
-            </li>
+            </motion.article>
           ))}
-        </ol>
+        </Stagger>
       </div>
     </section>
   )
 }
+
+/* ——— База: олимпиада → вуз ——— */
 
 function Bases({ olympiads, universities }) {
   return (
-    <section className="container-x py-16 lg:py-24">
-      <div className="flex flex-wrap items-end justify-between gap-6">
-        <Heading
-          eyebrow="База олимпиад и вузов"
-          title="Сначала цель, потом подготовка"
-          text="Мы держим в одном месте, какие перечневые олимпиады существуют и какие льготы они дают в конкретных вузах."
-        />
-        <Link
-          to="/base"
-          className="inline-flex items-center gap-2 text-[15px] font-semibold text-pen-700 hover:text-pen-900"
-        >
-          Вся база
-          <Icon name="arrow" className="h-4 w-4" />
-        </Link>
-      </div>
+    <section className="border-b border-line">
+      <div className="container-x py-16 lg:py-24">
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <Reveal>
+            <p className="eyebrow mb-3">база олимпиад и вузов</p>
+            <h2 className="max-w-2xl font-serif text-[30px] font-semibold leading-tight sm:text-[38px]">
+              Сначала цель, потом подготовка
+            </h2>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <Link to="/base" className="inline-flex items-center gap-2 text-[15px] font-semibold text-pen-700 hover:text-pen-900">
+              Вся база
+              <Icon name="arrow" className="h-4 w-4" />
+            </Link>
+          </Reveal>
+        </div>
 
-      <div className="mt-10 grid gap-4 md:grid-cols-3">
-        {olympiads.slice(0, 3).map((o) => (
-          <article key={o.id} className="rounded-lg border border-line bg-white p-6 transition hover:shadow-lift">
-            <div className="flex items-start justify-between gap-3">
-              <h3 className="text-[19px] font-bold">{o.title}</h3>
-              <Chip className="bg-pen-50 text-pen-700">{o.level}</Chip>
-            </div>
-            <p className="mt-1.5 text-sm text-ink-400">{o.organizer}</p>
-            <p className="mt-4 text-[15px] leading-relaxed text-ink-700">{o.perk}</p>
-            <div className="mt-5 flex flex-wrap gap-2 border-t border-line pt-4">
-              {o.subjects.map((s) => (
-                <Chip key={s} className="border border-line bg-paper text-ink-500">
-                  {s === 'physics' ? 'Физика' : s === 'math' ? 'Математика' : s}
-                </Chip>
-              ))}
-              <Chip className="border border-line bg-paper text-ink-500">{o.grades}</Chip>
-            </div>
-          </article>
-        ))}
-      </div>
+        <Stagger className="mt-10 grid gap-4 md:grid-cols-3" step={0.08}>
+          {olympiads.slice(0, 3).map((o) => (
+            <motion.article key={o.id} variants={staggerItem} whileHover={{ y: -4 }} className="card p-6">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="text-[18px] font-bold">{o.title}</h3>
+                <span className="chip bg-pen-50 text-pen-700">{o.level}</span>
+              </div>
+              <p className="mt-1.5 text-sm text-ink-400">{o.organizer}</p>
+              <p className="mt-4 text-[15px] leading-relaxed text-ink-700">{o.perk}</p>
+            </motion.article>
+          ))}
+        </Stagger>
 
-      <div className="mt-4 grid gap-4 md:grid-cols-3">
-        {universities.slice(0, 3).map((u) => (
-          <article key={u.id} className="flex items-start gap-4 rounded-lg border border-line bg-white p-6">
-            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-md bg-pen-700 font-mono text-[12px] font-medium text-white">
-              {u.short}
-            </span>
-            <div className="min-w-0">
-              <h3 className="text-[16px] font-bold leading-snug">{u.title}</h3>
-              <p className="mt-1 text-sm text-ink-400">{u.city}</p>
-              <p className="mt-3 text-[14px] leading-relaxed text-ink-500">
-                Принимает: {u.accepts.map((a) => a.title).join(' · ')}
-              </p>
-            </div>
-          </article>
-        ))}
+        <Stagger className="mt-4 grid gap-4 md:grid-cols-3" step={0.08}>
+          {universities.slice(0, 3).map((u) => (
+            <motion.article key={u.id} variants={staggerItem} className="card flex items-start gap-4 p-6">
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-pen-700 font-mono text-[13px] font-bold text-white">
+                {u.short}
+              </span>
+              <div className="min-w-0">
+                <h3 className="text-[16px] font-bold leading-snug">{u.title}</h3>
+                <p className="mt-1 text-sm text-ink-400">{u.city}</p>
+                <p className="mt-3 text-[14px] leading-relaxed text-ink-500">
+                  Принимает: {u.accepts.map((a) => a.title).join(' · ')}
+                </p>
+              </div>
+            </motion.article>
+          ))}
+        </Stagger>
       </div>
     </section>
   )
 }
 
+/* ——— ИИ-помощник: диалог печатается при появлении ——— */
+
+const CHAT = [
+  { me: true, text: 'Подбери 5 задач по импульсу уровня отбора Физтеха' },
+  { me: false, text: 'Собрала: две на упругий удар, одна на центр масс и две на разрыв тела. Начните со второй — она ближе всего к формату.' },
+  { me: true, text: 'Проверь моё решение третьей задачи' },
+  { me: false, text: 'Импульс записан верно, но в проекции на вертикаль потерян знак скорости второго осколка — поэтому ответ вдвое больше.' },
+]
+
 function Assistant() {
+  const ref = useRef(null)
+  const inView = useInView(ref, { once: true, margin: '-80px' })
+  const reduce = useReducedMotion()
+
   return (
-    <section className="border-y border-line bg-pen-900 text-white">
+    <section className="border-b border-line bg-pen-800 text-white">
       <div className="container-x grid gap-10 py-16 lg:grid-cols-2 lg:items-center lg:py-20">
-        <div>
-          <p className="font-mono text-xs uppercase tracking-[0.08em] text-pen-300">§ ИИ-помощник</p>
-          <h2 className="mt-3 font-serif text-[32px] font-medium leading-tight sm:text-[40px]">
+        <Reveal>
+          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-pen-300">§ ии-помощник</p>
+          <h2 className="mt-3 font-serif text-[30px] font-semibold leading-tight sm:text-[38px]">
             Спросить можно так же, как у репетитора
           </h2>
           <p className="mt-5 max-w-lg text-[17px] leading-relaxed text-pen-100">
-            Помощник знает каталог тем и задачи прошлых лет: соберёт подборку под ваш уровень, объяснит идею решения и
-            найдёт шаг, на котором вы потеряли условие.
+            Помощник знает программу и задачи прошлых лет: соберёт подборку под ваш уровень и найдёт шаг, на котором
+            вы потеряли условие.
           </p>
-          <button className="btn mt-8 bg-white text-pen-900 hover:bg-pen-50" onClick={() => navigate('/topic/kinematics')}>
+          <motion.button
+            className="btn mt-8 bg-white text-pen-800 hover:bg-pen-50"
+            onClick={() => navigate('/program')}
+            whileHover={{ x: 2 }}
+            whileTap={{ scale: 0.98 }}
+          >
             Посмотреть на примере темы
             <Icon name="arrow" className="h-[18px] w-[18px]" />
-          </button>
-        </div>
+          </motion.button>
+        </Reveal>
 
-        <div className="space-y-3">
-          {[
-            { me: true, text: 'Подбери 5 задач по импульсу уровня отбора Физтеха' },
-            {
-              me: false,
-              text: 'Собрала подборку: две на упругий удар, одна на центр масс и две на разрыв тела. Начните со второй — она ближе всего к формату Физтеха.',
-            },
-            { me: true, text: 'Проверь моё решение третьей задачи' },
-            {
-              me: false,
-              text: 'Импульс записан верно, но в проекции на вертикальную ось потерян знак у скорости второго осколка — из-за этого ответ вдвое больше.',
-            },
-          ].map((m, i) => (
-            <div key={i} className={`flex ${m.me ? 'justify-end' : 'justify-start'}`}>
+        <div ref={ref} className="space-y-3">
+          {CHAT.map((m, i) => (
+            <motion.div
+              key={i}
+              className={`flex ${m.me ? 'justify-end' : 'justify-start'}`}
+              initial={reduce ? false : { opacity: 0, y: 10, scale: 0.98 }}
+              animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
+              transition={{ duration: 0.4, ease: EASE, delay: i * 0.45 }}
+            >
               <p
-                className={`max-w-[85%] rounded-xl px-4 py-3 text-[15px] leading-relaxed ${
+                className={`max-w-[85%] rounded-lg px-4 py-3 text-[15px] leading-relaxed ${
                   m.me ? 'bg-pen-600 text-white' : 'bg-white text-ink-700'
                 }`}
               >
                 {m.text}
               </p>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
@@ -428,87 +637,91 @@ function Assistant() {
   )
 }
 
+/* ——— Тарифы ——— */
+
 function Pricing({ plans }) {
   return (
-    <section id="pricing" className="container-x scroll-mt-24 py-16 lg:py-24">
-      <Heading
-        align="center"
-        eyebrow="Тарифы"
-        title="Сориентироваться — бесплатно, готовиться — по подписке"
-        text="База олимпиад и вузов открыта всегда: понять свой маршрут можно, ничего не оплачивая."
-      />
+    <section id="pricing" className="scroll-mt-24 border-b border-line bg-white">
+      <div className="container-x py-16 lg:py-24">
+        <Reveal className="mx-auto max-w-2xl text-center">
+          <p className="eyebrow mb-3">тарифы</p>
+          <h2 className="font-serif text-[30px] font-semibold leading-tight sm:text-[38px]">
+            Сориентироваться — бесплатно
+          </h2>
+          <p className="mt-4 text-[17px] leading-relaxed text-ink-500">
+            База олимпиад и вузов открыта всегда: понять свой маршрут можно, ничего не оплачивая.
+          </p>
+        </Reveal>
 
-      <div className="mx-auto mt-12 grid max-w-4xl gap-5 md:grid-cols-2">
-        {plans.map((plan) => (
-          <article
-            key={plan.id}
-            className={`relative flex flex-col rounded-lg border p-7 sm:p-8 ${
-              plan.accent ? 'border-pen-700 bg-white shadow-lift' : 'border-line bg-white shadow-card'
-            }`}
-          >
-            {plan.accent && (
-              <span className="absolute -top-3 left-7 rounded-full bg-pen-700 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-white">
-                Популярный
-              </span>
-            )}
-            <h3 className="text-[19px] font-bold">{plan.title}</h3>
-            <p className="mt-4 flex items-baseline gap-2">
-              <span className="font-mono text-[34px] font-medium leading-none">{plan.price_display}</span>
-              <span className="text-[15px] text-ink-400">{plan.period}</span>
-            </p>
-            <p className="mt-4 text-[15px] leading-relaxed text-ink-500">{plan.summary}</p>
-
-            <ul className="mt-6 flex-1 space-y-3">
-              {plan.features.map((f) => (
-                <li key={f} className="flex gap-3 text-[15px] leading-relaxed text-ink-700">
-                  <Icon name="check" className="mt-0.5 h-[18px] w-[18px] shrink-0 text-pen-600" strokeWidth={2.2} />
-                  {f}
-                </li>
-              ))}
-            </ul>
-
-            <button
-              className={`mt-8 w-full ${plan.accent ? 'btn-primary bg-pen-700 hover:bg-pen-800 active:bg-pen-900' : 'btn-secondary'}`}
-              onClick={() => navigate(plan.accent ? '/progress' : '/catalog')}
+        <Stagger className="mx-auto mt-12 grid max-w-4xl gap-5 md:grid-cols-2" step={0.12}>
+          {plans.map((plan) => (
+            <motion.article
+              key={plan.id}
+              variants={staggerItem}
+              whileHover={{ y: -4 }}
+              className={`relative flex flex-col rounded-lg border bg-white p-7 ${
+                plan.accent ? 'border-pen-700' : 'border-line'
+              }`}
             >
-              {plan.cta}
-            </button>
-          </article>
-        ))}
+              {plan.accent && (
+                <span className="chip absolute -top-2.5 left-6 bg-pen-700 text-white">популярный</span>
+              )}
+              <h3 className="text-[18px] font-bold">{plan.title}</h3>
+              <p className="mt-4 flex items-baseline gap-2">
+                <span className="font-mono text-[34px] font-semibold leading-none tabular-nums">{plan.price_display}</span>
+                <span className="text-[15px] text-ink-400">{plan.period}</span>
+              </p>
+              <p className="mt-4 text-[15px] leading-relaxed text-ink-500">{plan.summary}</p>
+              <ul className="mt-6 flex-1 space-y-3">
+                {plan.features.map((f) => (
+                  <li key={f} className="flex gap-3 text-[15px] leading-relaxed text-ink-700">
+                    <Icon name="check" className="mt-0.5 h-[18px] w-[18px] shrink-0 text-pen-600" strokeWidth={2.2} />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <button
+                className={`mt-8 w-full ${plan.accent ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => navigate(plan.accent ? '/login' : '/program')}
+              >
+                {plan.cta}
+              </button>
+            </motion.article>
+          ))}
+        </Stagger>
       </div>
-
-      <p className="mx-auto mt-6 max-w-4xl text-center text-sm text-ink-400">
-        Прототип: оплата не подключена, кнопки ведут внутрь продукта.
-      </p>
     </section>
   )
 }
+
+/* ——— Финал ——— */
 
 function FinalCta({ sections }) {
   const physics = sections.filter((s) => s.subject === 'physics').length
   const math = sections.filter((s) => s.subject === 'math').length
 
   return (
-    <section className="container-x pb-4">
-      <div className="flex flex-col items-start gap-8 rounded-lg border border-line bg-white p-8 sm:p-12 lg:flex-row lg:items-center lg:justify-between">
-        <div className="max-w-xl">
-          <h2 className="font-serif text-[30px] font-medium leading-tight sm:text-[36px]">
+    <section className="relative overflow-hidden">
+      <div className="grid-paper pointer-events-none absolute inset-0 -z-10" />
+      <div className="container-x py-16 lg:py-24">
+        <Reveal className="mx-auto max-w-2xl text-center">
+          <h2 className="font-serif text-[30px] font-semibold leading-tight sm:text-[40px]">
             До отборочных этапов — меньше трёх месяцев
           </h2>
           <p className="mt-4 text-[17px] leading-relaxed text-ink-500">
-            {physics} разделов по физике и {math} по математике уже разложены по темам. Начните с той, которая западает
-            сильнее всего.
+            {physics} разделов по физике и {math} по математике уже разложены по темам. Начните с той, которая
+            западает сильнее всего.
           </p>
-        </div>
-        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-          <button className="btn-primary bg-pen-700 hover:bg-pen-800 active:bg-pen-900" onClick={() => navigate('/catalog')}>
-            Начать подготовку
-            <Icon name="arrow" className="h-[18px] w-[18px]" />
-          </button>
-          <button className="btn-secondary" onClick={() => navigate('/progress')}>
-            Посмотреть кабинет
-          </button>
-        </div>
+          <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+            <motion.button className="btn-primary" onClick={() => navigate('/program')} whileHover={{ x: 2 }} whileTap={{ scale: 0.98 }}>
+              Открыть программу
+              <Icon name="arrow" className="h-[18px] w-[18px]" />
+            </motion.button>
+            <motion.button className="btn-secondary" onClick={() => navigate('/progress')} whileHover={{ x: 2 }} whileTap={{ scale: 0.98 }}>
+              Посмотреть кабинет
+            </motion.button>
+          </div>
+        </Reveal>
       </div>
     </section>
   )
@@ -522,17 +735,18 @@ export default function Landing() {
   const [topics, olympiads, universities, plans, sections] = data || [[], [], [], [], []]
 
   const stats = [
-    { value: loading ? '—' : olympiads.length, label: 'перечневых олимпиад в базе' },
-    { value: loading ? '—' : topics.length, label: 'тем по физике и математике' },
-    { value: loading ? '—' : topics.length * 6, label: 'задач трёх уровней сложности' },
-    { value: loading ? '—' : universities.length, label: 'вузов с разбором льгот' },
+    { value: olympiads.length, label: 'перечневых олимпиад в базе' },
+    { value: topics.length, label: 'тем по физике и математике' },
+    { value: topics.length * 6, label: 'задач трёх уровней сложности' },
+    { value: universities.length, label: 'вузов с разбором льгот' },
   ]
 
   return (
     <>
-      <Hero stats={stats} olympiads={olympiads} />
+      <Hero stats={stats} olympiads={olympiads} loading={loading} />
+      <Route />
+      <TaskDemo />
       <Audience />
-      <HowItWorks />
       {!loading && <Bases olympiads={olympiads} universities={universities} />}
       <Assistant />
       {!loading && plans.length > 0 && <Pricing plans={plans} />}

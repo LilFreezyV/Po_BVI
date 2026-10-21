@@ -13,7 +13,7 @@ import { useAsync } from '../lib/useAsync.js'
 import { useAuth } from '../lib/auth.jsx'
 import { STATUS_META } from '../data/site.js'
 import { SUBJECT_LABELS } from '../lib/subjects.js'
-import { Chip, Icon, Link, ProgressBar, navigate } from '../components/ui.jsx'
+import { Chip, Icon, Link, ProgressBar, SkeletonCards, navigate } from '../components/ui.jsx'
 
 const FILTERS = [
   { id: 'all', label: 'Все темы' },
@@ -51,7 +51,7 @@ function TopicRow({ topic, sectionTitle }) {
   return (
     <Link
       to={`/topic/${topic.id}`}
-      className="flex flex-col gap-3 border-b border-line px-1 py-4 transition last:border-0 hover:bg-brand-50/40 sm:flex-row sm:items-center sm:gap-5 sm:px-3"
+      className="flex flex-col gap-3 border-b border-line px-1 py-4 transition last:border-0 hover:bg-pen-50/40 sm:flex-row sm:items-center sm:gap-5 sm:px-3"
     >
       <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${meta.dot}`} />
       <span className="min-w-0 flex-1">
@@ -121,7 +121,7 @@ function ProblemBookCard({ book }) {
         </span>
       </div>
       <div className="mt-3">
-        <ProgressBar value={percent(book.solved, book.total)} className="bg-brand-500" height="h-2" />
+        <ProgressBar value={percent(book.solved, book.total)} className="bg-pen-500" height="h-2" />
       </div>
 
       <ul className="mt-5 divide-y divide-line">
@@ -134,7 +134,7 @@ function ProblemBookCard({ book }) {
             >
               <span className="w-20 shrink-0 text-[14px] font-semibold">{g.grade} класс</span>
               <span className="flex-1">
-                <ProgressBar value={percent(g.solved, g.total)} className="bg-brand-500" height="h-1.5" />
+                <ProgressBar value={percent(g.solved, g.total)} className="bg-pen-500" height="h-1.5" />
               </span>
               <span className="w-16 shrink-0 text-right text-[13px] tabular-nums text-ink-400">
                 {g.solved}/{g.total}
@@ -162,7 +162,7 @@ function ProblemBookCard({ book }) {
       </ul>
       <Link
         to="/program"
-        className="mt-3 inline-flex items-center gap-2 text-[14px] font-semibold text-brand-700 hover:text-brand-900"
+        className="mt-3 inline-flex items-center gap-2 text-[14px] font-semibold text-pen-700 hover:text-pen-900"
       >
         Открыть программу
         <Icon name="arrow" className="h-4 w-4" />
@@ -175,10 +175,10 @@ function LoginGate() {
   return (
     <div className="container-x py-16 lg:py-24">
       <div className="card mx-auto max-w-md p-8 text-center">
-        <span className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-brand-50 text-brand-700">
+        <span className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-pen-50 text-pen-700">
           <Icon name="lock" />
         </span>
-        <h1 className="mt-4 text-[22px] font-extrabold">Личный кабинет — только для своих</h1>
+        <h1 className="mt-4 font-serif text-[22px] font-semibold">Личный кабинет — только для своих</h1>
         <p className="mt-2 text-[15px] leading-relaxed text-ink-500">
           Войдите или зарегистрируйтесь, чтобы видеть свой прогресс по темам и рекомендации.
         </p>
@@ -215,7 +215,7 @@ function CabinetContent({ user }) {
   }, [data])
 
   if (loading) {
-    return <p className="py-24 text-center text-ink-400">Загружаем кабинет…</p>
+    return <div className="container-x py-10"><SkeletonCards count={4} columns="sm:grid-cols-2 lg:grid-cols-4" /></div>
   }
   if (error) {
     return (
@@ -234,11 +234,11 @@ function CabinetContent({ user }) {
       {/* Шапка кабинета */}
       <div className="card flex flex-col gap-6 p-6 sm:p-8 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-4">
-          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-brand-700 text-[18px] font-extrabold text-white">
+          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-pen-700 text-[18px] font-extrabold text-white">
             {initials(user.name)}
           </span>
           <div>
-            <h1 className="text-[24px] font-extrabold leading-tight sm:text-[28px]">{user.name}</h1>
+            <h1 className="font-serif text-[24px] font-semibold leading-tight sm:text-[28px]">{user.name}</h1>
             <p className="mt-1 text-[15px] text-ink-500">
               {user.grade || 'Класс не указан'} · цель:{' '}
               <span className="font-semibold text-ink-900">{user.goal || 'не указана'}</span>
@@ -260,7 +260,7 @@ function CabinetContent({ user }) {
 
       {/* Цифры */}
       <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard value={overview.done} label="Тем пройдено" hint={`из ${totalTopics} в каталоге`} accent="text-brand-700" />
+        <StatCard value={overview.done} label="Тем пройдено" hint={`из ${totalTopics} в каталоге`} accent="text-pen-700" />
         <StatCard value={overview.progress} label="В процессе" hint="есть незакрытые уровни" accent="text-amber-600" />
         <StatCard value={overview.new} label="Не начато" hint="ждут в плане подготовки" accent="text-ink-400" />
         <StatCard value={`${overview.solved_tasks}/${overview.total_tasks}`} label="Задач решено" />
@@ -269,8 +269,8 @@ function CabinetContent({ user }) {
       {/* Прогресс по предметам */}
       <div className="mt-5 grid gap-4 md:grid-cols-2">
         {[
-          { title: SUBJECT_LABELS.physics, data: physics, cls: 'bg-brand-500' },
-          { title: SUBJECT_LABELS.math, data: math, cls: 'bg-clay-400' },
+          { title: SUBJECT_LABELS.physics, data: physics, cls: 'bg-pen-500' },
+          { title: SUBJECT_LABELS.math, data: math, cls: 'bg-mark-400' },
         ].map((s) => (
           <div key={s.title} className="card p-6">
             <div className="flex items-center justify-between">
@@ -298,7 +298,7 @@ function CabinetContent({ user }) {
                   key={f.id}
                   onClick={() => setFilter(f.id)}
                   className={`rounded-lg px-3 py-1.5 text-[13px] font-semibold transition ${
-                    filter === f.id ? 'bg-brand-700 text-white' : 'text-ink-500 hover:text-ink-900'
+                    filter === f.id ? 'bg-pen-700 text-white' : 'text-ink-500 hover:text-ink-900'
                   }`}
                 >
                   {f.label}
@@ -334,7 +334,7 @@ function CabinetContent({ user }) {
           <QuestionsCard items={questions} />
           <div className="card p-5">
             <div className="flex items-center gap-2.5">
-              <Icon name="target" className="h-5 w-5 text-clay-500" />
+              <Icon name="target" className="h-5 w-5 text-mark-500" />
               <p className="text-[15px] font-bold">Продолжить</p>
             </div>
             {continueList.length === 0 ? (
@@ -347,7 +347,7 @@ function CabinetContent({ user }) {
                   <li key={t.topic_id}>
                     <Link
                       to={`/topic/${t.topic_id}`}
-                      className="block rounded-xl bg-paper p-4 transition hover:bg-brand-50"
+                      className="block rounded-xl bg-paper p-4 transition hover:bg-pen-50"
                     >
                       <p className="text-[15px] font-semibold">{t.title}</p>
                       <p className="mt-1 text-[13px] text-ink-400">
@@ -365,7 +365,7 @@ function CabinetContent({ user }) {
 
           <div className="card p-5">
             <div className="flex items-center gap-2.5">
-              <Icon name="layers" className="h-5 w-5 text-brand-600" />
+              <Icon name="layers" className="h-5 w-5 text-pen-600" />
               <p className="text-[15px] font-bold">План под цель</p>
             </div>
             <p className="mt-3 text-[14px] leading-relaxed text-ink-500">
@@ -379,7 +379,7 @@ function CabinetContent({ user }) {
 
           <div className="card p-5">
             <div className="flex items-center gap-2.5">
-              <Icon name="chart" className="h-5 w-5 text-brand-600" />
+              <Icon name="chart" className="h-5 w-5 text-pen-600" />
               <p className="text-[15px] font-bold">Слабые места</p>
             </div>
             {weakSpots.length === 0 ? (

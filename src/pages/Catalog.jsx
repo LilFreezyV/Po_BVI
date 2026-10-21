@@ -4,7 +4,7 @@ import { useAsync } from '../lib/useAsync.js'
 import { useAuth } from '../lib/auth.jsx'
 import { SUBJECT_LABELS } from '../lib/subjects.js'
 import { STATUS_META } from '../data/site.js'
-import { Chip, Icon, Link, ProgressBar } from '../components/ui.jsx'
+import { Chip, Icon, Link, ProgressBar, SkeletonCards } from '../components/ui.jsx'
 
 const FILTERS = [
   { id: 'all', label: 'Все предметы' },
@@ -21,9 +21,9 @@ function TopicCard({ topic, olympiadTitle }) {
       className="card group flex flex-col p-5 transition hover:-translate-y-0.5 hover:shadow-lift"
     >
       <div className="flex items-start justify-between gap-3">
-        <h3 className="text-[17px] font-bold leading-snug group-hover:text-brand-700">{topic.title}</h3>
+        <h3 className="text-[17px] font-bold leading-snug group-hover:text-pen-700">{topic.title}</h3>
         {topic.free ? (
-          <Chip className="shrink-0 bg-brand-50 text-brand-700">Бесплатно</Chip>
+          <Chip className="shrink-0 bg-pen-50 text-pen-700">Бесплатно</Chip>
         ) : (
           <span className="shrink-0 text-ink-300" title="Доступно по подписке">
             <Icon name="lock" className="h-[18px] w-[18px]" />
@@ -93,10 +93,11 @@ export default function Catalog() {
   const total = sections.reduce((acc, s) => acc + s.topics.length, 0)
 
   return (
-    <div className="container-x py-10 lg:py-14">
+    <div className="container-x relative py-10 lg:py-14">
+      <div className="ruled-paper pointer-events-none absolute inset-x-0 top-0 h-56 -z-10" />
       <div className="max-w-3xl">
         <p className="eyebrow mb-3">Каталог тем</p>
-        <h1 className="text-[32px] font-extrabold leading-tight sm:text-[42px]">
+        <h1 className="font-serif text-[32px] font-semibold leading-tight sm:text-[40px]">
           Всё, что спрашивают на перечневых олимпиадах
         </h1>
         <p className="mt-4 text-[17px] leading-relaxed text-ink-500">
@@ -105,7 +106,7 @@ export default function Catalog() {
         </p>
         <Link
           to="/program"
-          className="mt-4 inline-flex items-center gap-2 text-[15px] font-semibold text-brand-700 hover:text-brand-900"
+          className="mt-4 inline-flex items-center gap-2 text-[15px] font-semibold text-pen-700 hover:text-pen-900"
         >
           Программа по физике для 9, 10 и 11 класса
           <Icon name="arrow" className="h-4 w-4" />
@@ -120,7 +121,7 @@ export default function Catalog() {
                 key={f.id}
                 onClick={() => setSubject(f.id)}
                 className={`rounded-lg px-4 py-2 text-[14px] font-semibold transition ${
-                  subject === f.id ? 'bg-brand-700 text-white' : 'text-ink-500 hover:text-ink-900'
+                  subject === f.id ? 'bg-pen-700 text-white' : 'text-ink-500 hover:text-ink-900'
                 }`}
               >
                 {f.label}
@@ -133,14 +134,14 @@ export default function Catalog() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Поиск темы: импульс, графы…"
-              className="w-full rounded-xl border border-line bg-white px-4 py-2.5 text-[15px] outline-none transition placeholder:text-ink-300 focus:border-brand-400 sm:w-64"
+              className="w-full rounded-xl border border-line bg-white px-4 py-2.5 text-[15px] outline-none transition placeholder:text-ink-300 focus:border-pen-400 sm:w-64"
             />
             <span className="hidden shrink-0 text-sm text-ink-400 sm:block">{total} тем</span>
           </div>
         </div>
       </div>
 
-      {loading && <p className="py-16 text-center text-ink-400">Загружаем каталог…</p>}
+      {loading && <div className="pt-10"><SkeletonCards count={6} /></div>}
       {error && !loading && (
         <p className="py-16 text-center text-ink-400">
           Не удалось загрузить данные. Проверьте, что бэкенд запущен.

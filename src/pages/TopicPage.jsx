@@ -5,7 +5,7 @@ import { getTopic as fetchTopic, setTaskStatus } from '../lib/api.js'
 import AttemptButtons, { ATTEMPT_CARD } from '../components/AttemptButtons.jsx'
 import { useAsync } from '../lib/useAsync.js'
 import { useAuth } from '../lib/auth.jsx'
-import { Chip, Icon, Link, ProgressBar, navigate } from '../components/ui.jsx'
+import { Chip, Icon, Link, ProgressBar, Skeleton, SkeletonLines, navigate } from '../components/ui.jsx'
 
 function TaskCard({ task, index, status, onStatus }) {
   const [open, setOpen] = useState(false)
@@ -21,7 +21,7 @@ function TaskCard({ task, index, status, onStatus }) {
             <span className="text-[13px] text-ink-400">{task.source}</span>
             <button
               onClick={() => setOpen((v) => !v)}
-              className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-700 hover:text-brand-900"
+              className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-pen-700 hover:text-pen-900"
             >
               {open ? 'Скрыть подсказку' : 'Подсказка к решению'}
               <Icon name="chevronDown" className={`h-4 w-4 transition ${open ? 'rotate-180' : ''}`} />
@@ -64,7 +64,7 @@ function LevelBlock({ level, tasks, locked, statusOf, onStatus }) {
         {locked && (
           <div className="absolute inset-0 grid place-items-center bg-white/60 p-6">
             <div className="max-w-sm text-center">
-              <span className="mx-auto grid h-11 w-11 place-items-center rounded-xl bg-brand-50 text-brand-700">
+              <span className="mx-auto grid h-11 w-11 place-items-center rounded-xl bg-pen-50 text-pen-700">
                 <Icon name="lock" />
               </span>
               <p className="mt-4 text-[16px] font-bold">Доступно по подписке</p>
@@ -104,7 +104,7 @@ function Assistant({ topic }) {
   return (
     <div className="card p-5">
       <div className="flex items-center gap-2.5">
-        <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-700 text-white">
+        <span className="grid h-8 w-8 place-items-center rounded-lg bg-pen-700 text-white">
           <Icon name="spark" className="h-4 w-4" />
         </span>
         <p className="text-[15px] font-bold">ИИ-помощник</p>
@@ -115,7 +115,7 @@ function Assistant({ topic }) {
           <div key={i} className={`flex ${m.me ? 'justify-end' : 'justify-start'}`}>
             <p
               className={`max-w-[90%] rounded-xl px-3.5 py-2.5 text-[14px] leading-relaxed ${
-                m.me ? 'bg-brand-700 text-white' : 'bg-paper text-ink-700'
+                m.me ? 'bg-pen-700 text-white' : 'bg-paper text-ink-700'
               }`}
             >
               {m.text}
@@ -129,7 +129,7 @@ function Assistant({ topic }) {
           <button
             key={s}
             onClick={() => ask(s)}
-            className="rounded-full border border-line bg-paper px-3 py-1.5 text-left text-[13px] font-medium text-ink-700 transition hover:border-brand-300 hover:text-brand-700"
+            className="rounded-full border border-line bg-paper px-3 py-1.5 text-left text-[13px] font-medium text-ink-700 transition hover:border-pen-300 hover:text-pen-700"
           >
             {s}
           </button>
@@ -160,7 +160,12 @@ export default function TopicPage({ topicId }) {
   }
 
   if (loading) {
-    return <div className="container-x py-24 text-center text-ink-400">Загружаем тему…</div>
+    return (
+      <div className="container-x py-10 lg:py-14">
+        <Skeleton className="h-8 w-2/3 max-w-lg" />
+        <SkeletonLines count={6} className="mt-8 max-w-2xl" />
+      </div>
+    )
   }
 
   if (error?.status === 404 || (!loading && !topic)) {
@@ -206,7 +211,7 @@ export default function TopicPage({ topicId }) {
               <Icon name="clock" className="h-3.5 w-3.5" />
               {topic.minutes} мин
             </Chip>
-            {topic.free && <Chip className="bg-brand-50 text-brand-700">Открытая тема</Chip>}
+            {topic.free && <Chip className="bg-pen-50 text-pen-700">Открытая тема</Chip>}
           </div>
 
           <h1 className="mt-4 text-[32px] font-extrabold leading-tight sm:text-[40px]">{topic.title}</h1>
@@ -215,7 +220,7 @@ export default function TopicPage({ topicId }) {
           {/* Конспект теории */}
           <section className="card mt-8 p-6 sm:p-8">
             <div className="flex items-center gap-2.5">
-              <Icon name="book" className="h-5 w-5 text-brand-600" />
+              <Icon name="book" className="h-5 w-5 text-pen-600" />
               <h2 className="text-[19px] font-bold">Конспект теории</h2>
             </div>
 
@@ -226,7 +231,7 @@ export default function TopicPage({ topicId }) {
               <ul className="mt-3 space-y-2.5">
                 {topic.theory.points.map((p) => (
                   <li key={p} className="flex gap-3 text-[15px] leading-relaxed text-ink-700">
-                    <span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-brand-400" />
+                    <span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-pen-400" />
                     {p}
                   </li>
                 ))}
@@ -272,7 +277,7 @@ export default function TopicPage({ topicId }) {
             {topic.prev_topic_id ? (
               <Link
                 to={`/topic/${topic.prev_topic_id}`}
-                className="inline-flex items-center gap-2 text-[15px] font-semibold text-ink-500 hover:text-brand-700"
+                className="inline-flex items-center gap-2 text-[15px] font-semibold text-ink-500 hover:text-pen-700"
               >
                 <Icon name="chevron" className="h-4 w-4 rotate-180" />
                 Предыдущая тема
@@ -283,7 +288,7 @@ export default function TopicPage({ topicId }) {
             {topic.next_topic_id && (
               <Link
                 to={`/topic/${topic.next_topic_id}`}
-                className="inline-flex items-center gap-2 text-[15px] font-semibold text-ink-500 hover:text-brand-700"
+                className="inline-flex items-center gap-2 text-[15px] font-semibold text-ink-500 hover:text-pen-700"
               >
                 Следующая тема
                 <Icon name="chevron" className="h-4 w-4" />
@@ -325,7 +330,7 @@ export default function TopicPage({ topicId }) {
             </ul>
             <Link
               to="/base"
-              className="mt-4 inline-flex items-center gap-2 text-[14px] font-semibold text-brand-700 hover:text-brand-900"
+              className="mt-4 inline-flex items-center gap-2 text-[14px] font-semibold text-pen-700 hover:text-pen-900"
             >
               База олимпиад и вузов
               <Icon name="arrow" className="h-4 w-4" />
