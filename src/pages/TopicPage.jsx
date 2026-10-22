@@ -214,35 +214,13 @@ export default function TopicPage({ topicId }) {
             {topic.free && <Chip className="bg-pen-50 text-pen-700">Открытая тема</Chip>}
           </div>
 
-          <h1 className="mt-4 text-[32px] font-extrabold leading-tight sm:text-[40px]">{topic.title}</h1>
+          <h1 className="mt-4 font-serif text-[32px] font-semibold leading-tight sm:text-[40px]">
+            Задачи: {topic.title}
+          </h1>
           <p className="mt-3 max-w-2xl text-[17px] leading-relaxed text-ink-500">{topic.blurb}</p>
 
-          {/* Конспект теории */}
-          <section className="card mt-8 p-6 sm:p-8">
-            <div className="flex items-center gap-2.5">
-              <Icon name="book" className="h-5 w-5 text-pen-600" />
-              <h2 className="text-[19px] font-bold">Конспект теории</h2>
-            </div>
-
-            <p className="mt-4 text-[16px] leading-relaxed text-ink-700">{topic.theory.summary}</p>
-
-            <div className="mt-6 rounded-xl bg-paper p-5">
-              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-400">Что нужно помнить</p>
-              <ul className="mt-3 space-y-2.5">
-                {topic.theory.points.map((p) => (
-                  <li key={p} className="flex gap-3 text-[15px] leading-relaxed text-ink-700">
-                    <span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-pen-400" />
-                    {p}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <p className="mt-5 text-[14px] leading-relaxed text-ink-400">
-              В прототипе конспект сокращён. В продукте здесь полная выжимка, собранная из лучших учебников и
-              задачников, с выводами формул и разбором типичных ошибок.
-            </p>
-          </section>
+          {/* Конспект теории переехал к подтемам программы (#/theory/<подтема>) —
+              здесь страница только про задачи, см. CLAUDE.md, решение 2026-10-22. */}
 
           {/* Задачи по уровням */}
           <div className="mt-10">

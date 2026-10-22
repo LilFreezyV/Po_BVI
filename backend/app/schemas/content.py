@@ -129,6 +129,10 @@ class CurriculumLessonOut(BaseModel):
     grades: list[int]
     topic_id: str | None
     problem_count: int = 0
+    # Конспект подтемы уже написан (их пишем постепенно, см. scripts/theory_*.py).
+    has_theory: bool = False
+    # Сколько задач у связанной темы каталога — их решают в программе.
+    task_count: int = 0
     references: list[LessonReferenceOut] = []
 
 
@@ -178,3 +182,24 @@ class LessonProblemsOut(BaseModel):
     lesson_id: str
     problems: list[LessonProblemOut]
     sources: list[ProblemSourceOut]
+
+
+class LessonTheoryOut(BaseModel):
+    """Страница конспекта подтемы."""
+
+    id: str
+    title: str
+    description: str
+    grades: list[int]
+    summary: str | None
+    points: list[str]
+    # Ключ анимации, которой иллюстрируется конспект (см. TheoryFigure на фронте).
+    figure: str | None
+    module_id: str
+    module_title: str
+    subject: str
+    topic_id: str | None
+    task_count: int = 0
+    problem_count: int = 0
+    prev_id: str | None = None
+    next_id: str | None = None

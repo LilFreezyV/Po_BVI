@@ -6,7 +6,12 @@ from app.database import get_db
 from app.models.enums import SubjectEnum
 from app.models.user import User
 from app.security import get_current_user_optional
-from app.schemas.content import CurriculumModuleOut, LessonProblemsOut, LiteratureSourceOut
+from app.schemas.content import (
+    CurriculumModuleOut,
+    LessonProblemsOut,
+    LessonTheoryOut,
+    LiteratureSourceOut,
+)
 
 router = APIRouter(prefix="/curriculum", tags=["content"])
 
@@ -38,6 +43,17 @@ async def lesson_problems(
     Для вошедшего пользователя — с его отметками (status)."""
     user_id = current_user.id if current_user else None
     result = await content_crud.get_lesson_problems(session, lesson_id, user_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Подтема не найдена")
+    return result
+
+
+@router.get("/lessons/{lesson_id}/theory", response_model=LessonTheoryOut)
+async def lesson_theory(
+    lesson_id: str, session: AsyncSession = Depends(get_db)
+) -> LessonTheoryOut:
+    """Конспект подтемы. Открыт всем: теория у нас без пейвола, платные только задачи."""
+    result = await content_crud.get_lesson_theory(session, lesson_id)
     if result is None:
         raise HTTPException(status_code=404, detail="Подтема не найдена")
     return result

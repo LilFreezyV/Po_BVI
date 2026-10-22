@@ -8,6 +8,8 @@ import ProgressPage from './pages/Progress.jsx'
 import Base from './pages/Base.jsx'
 import Bvi from './pages/Bvi.jsx'
 import Archive from './pages/Archive.jsx'
+import Theory from './pages/Theory.jsx'
+import Tiktok from './pages/Tiktok.jsx'
 import Login from './pages/Login.jsx'
 import Program from './pages/Program.jsx'
 
@@ -39,7 +41,11 @@ export default function App() {
   }, [path, anchor])
 
   let page
-  if (path.startsWith('/topic/')) {
+  if (path.startsWith('/theory/')) {
+    page = <Theory lessonId={path.slice('/theory/'.length)} />
+  } else if (path === '/tiktok') {
+    page = <Tiktok />
+  } else if (path.startsWith('/topic/')) {
     page = <TopicPage topicId={path.slice('/topic/'.length)} />
   } else if (path === '/catalog') {
     page = <Catalog />

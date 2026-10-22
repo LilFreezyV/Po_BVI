@@ -5,9 +5,10 @@ const COLUMNS = [
   {
     title: 'Продукт',
     links: [
-      { label: 'Каталог тем', to: '/catalog' },
+      { label: 'Темы и конспекты', to: '/catalog' },
       { label: 'Архив заданий', to: '/archive' },
       { label: 'БВИ и вузы', to: '/bvi' },
+      { label: 'Задачи из тиктока', to: '/tiktok' },
       { label: 'Личный кабинет', to: '/progress' },
     ],
   },
