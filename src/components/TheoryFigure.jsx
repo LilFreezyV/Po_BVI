@@ -2111,6 +2111,1039 @@ function Lens({ still }) {
   )
 }
 
+/* ——— математика ——— */
+
+function Chessboard({ still }) {
+  const cells = []
+  for (let r = 0; r < 5; r++) {
+    for (let c = 0; c < 7; c++) {
+      cells.push({ r, c, dark: (r + c) % 2 === 1 })
+    }
+  }
+  const path = [
+    [1, 1], [2, 3], [3, 1], [4, 3], [2, 4], [1, 2],
+  ]
+  return (
+    <Sheet caption="конь меняет цвет каждым ходом">
+      {cells.map(({ r, c, dark }) => (
+        <rect
+          key={`${r}-${c}`}
+          x={76 + c * 24}
+          y={34 + r * 24}
+          width="24"
+          height="24"
+          fill={dark ? INK : '#fff'}
+          fillOpacity={dark ? 0.16 : 1}
+          stroke={INK}
+          strokeOpacity="0.2"
+        />
+      ))}
+      <motion.circle
+        r="8"
+        fill={MARK}
+        initial={{ cx: 76 + path[0][1] * 24 + 12, cy: 34 + path[0][0] * 24 + 12 }}
+        animate={
+          still
+            ? {}
+            : {
+                cx: path.map(([, c]) => 76 + c * 24 + 12),
+                cy: path.map(([r]) => 34 + r * 24 + 12),
+              }
+        }
+        transition={still ? {} : loop(5)}
+      />
+    </Sheet>
+  )
+}
+
+function Contradiction({ still }) {
+  return (
+    <Sheet caption="предположили — получили невозможное">
+      <rect x="54" y="62" width="88" height="56" rx="5" fill="none" stroke={INK} strokeOpacity="0.4" strokeWidth="1.8" />
+      <text x="72" y="96" fill={INK} fillOpacity="0.55" fontSize="13" fontFamily="monospace">
+        не A
+      </text>
+      <motion.g
+        initial={{ opacity: still ? 1 : 0 }}
+        animate={still ? {} : { opacity: [0, 1, 1, 0] }}
+        transition={still ? {} : loop(4, { times: [0, 0.3, 0.8, 1] })}
+      >
+        <line x1="150" y1="90" x2="192" y2="90" stroke={INK} strokeOpacity="0.5" strokeWidth="2" />
+        <polygon points="196,90 186,85 186,95" fill={INK} fillOpacity="0.5" />
+        <rect x="204" y="62" width="62" height="56" rx="5" fill={MARK} fillOpacity="0.12" stroke={MARK} strokeOpacity="0.5" strokeWidth="1.8" />
+        <line x1="218" y1="76" x2="252" y2="106" stroke={MARK} strokeWidth="2.6" />
+        <line x1="252" y1="76" x2="218" y2="106" stroke={MARK} strokeWidth="2.6" />
+      </motion.g>
+    </Sheet>
+  )
+}
+
+function Reverse({ still }) {
+  return (
+    <Sheet caption="идём с конца">
+      {[0, 1, 2, 3].map((i) => (
+        <rect key={i} x={54 + i * 58} y="76" width="40" height="34" rx="4" fill="none" stroke={INK} strokeOpacity="0.35" strokeWidth="1.6" />
+      ))}
+      {[0, 1, 2].map((i) => (
+        <motion.g
+          key={i}
+          initial={{ opacity: still ? 0.8 : 0 }}
+          animate={still ? {} : { opacity: [0, 1, 1, 0] }}
+          transition={still ? {} : loop(4, { delay: i * 0.5, times: [0, 0.25, 0.7, 1] })}
+        >
+          <line x1={210 - i * 58} y1="93" x2={176 - i * 58} y2="93" stroke={MARK} strokeWidth="2.4" />
+          <polygon
+            points={`${172 - i * 58},93 ${182 - i * 58},88 ${182 - i * 58},98`}
+            fill={MARK}
+          />
+        </motion.g>
+      ))}
+    </Sheet>
+  )
+}
+
+function Pigeonhole({ still }) {
+  return (
+    <Sheet caption="n + 1 предмет в n ящиках">
+      {[0, 1, 2].map((i) => (
+        <rect key={i} x={62 + i * 76} y="92" width="58" height="46" rx="4" fill="none" stroke={INK} strokeOpacity="0.4" strokeWidth="1.8" />
+      ))}
+      {[0, 1, 2, 3].map((i) => (
+        <motion.circle
+          key={i}
+          r="9"
+          fill={i === 3 ? MARK : INK}
+          fillOpacity={i === 3 ? 0.9 : 0.6}
+          initial={{ cx: 90 + i * 48, cy: 42 }}
+          animate={
+            still
+              ? { cy: 114, cx: [90, 166, 242, 110][i] }
+              : { cy: [42, 114], cx: [90 + i * 48, [90, 166, 242, 110][i]] }
+          }
+          transition={still ? {} : loop(4, { delay: i * 0.3, ease: 'easeInOut' })}
+        />
+      ))}
+    </Sheet>
+  )
+}
+
+function Induction({ still }) {
+  return (
+    <Sheet caption="база и переход">
+      {[0, 1, 2, 3, 4].map((i) => (
+        <motion.rect
+          key={i}
+          x={58 + i * 46}
+          width="16"
+          height="54"
+          rx="2"
+          fill={i === 0 ? MARK : INK}
+          fillOpacity={i === 0 ? 0.85 : 0.5}
+          initial={{ y: 70, rotate: 0 }}
+          style={{ originX: `${58 + i * 46}px`, originY: '124px' }}
+          animate={still ? {} : { rotate: [0, 0, 72, 72] }}
+          transition={still ? {} : loop(5, { delay: i * 0.3, times: [0, 0.2, 0.4, 1] })}
+        />
+      ))}
+      <line x1="40" y1="124" x2="290" y2="124" stroke={INK} strokeOpacity="0.3" strokeWidth="1.6" />
+    </Sheet>
+  )
+}
+
+function Invariant({ still }) {
+  return (
+    <Sheet caption="величина не меняется">
+      {[0, 1, 2].map((i) => (
+        <g key={i}>
+          <rect x={56 + i * 84} y="56" width="62" height="44" rx="4" fill="none" stroke={INK} strokeOpacity="0.35" strokeWidth="1.6" />
+          <motion.text
+            x={76 + i * 84}
+            y="84"
+            fill={MARK}
+            fontSize="15"
+            fontFamily="monospace"
+            initial={{ opacity: still ? 1 : 0.3 }}
+            animate={still ? {} : { opacity: [0.3, 1, 0.3] }}
+            transition={still ? {} : loop(3, { delay: i * 0.4 })}
+          >
+            = 7
+          </motion.text>
+        </g>
+      ))}
+      <text x="112" y="132" fill={INK} fillOpacity="0.45" fontSize="11" fontFamily="monospace">
+        операции не меняют
+      </text>
+    </Sheet>
+  )
+}
+
+function Extremal({ still }) {
+  const bars = [34, 58, 96, 70, 46, 82]
+  return (
+    <Sheet caption="берём крайний элемент">
+      {bars.map((h, i) => (
+        <rect
+          key={i}
+          x={62 + i * 34}
+          y={132 - h}
+          width="20"
+          height={h}
+          rx="2"
+          fill={h === 96 ? MARK : INK}
+          fillOpacity={h === 96 ? 0.85 : 0.35}
+        />
+      ))}
+      <line x1="46" y1="132" x2="286" y2="132" stroke={INK} strokeOpacity="0.3" strokeWidth="1.6" />
+      <motion.circle
+        cx="140"
+        cy="24"
+        r="6"
+        fill={MARK}
+        initial={{ opacity: still ? 1 : 0.2 }}
+        animate={still ? {} : { opacity: [0.2, 1, 0.2] }}
+        transition={still ? {} : loop(2.6)}
+      />
+    </Sheet>
+  )
+}
+
+function Game({ still }) {
+  return (
+    <Sheet caption="выигрышные и проигрышные позиции">
+      {[0, 1, 2, 3, 4].map((i) => (
+        <circle
+          key={i}
+          cx={66 + i * 46}
+          cy="92"
+          r="16"
+          fill={i % 2 === 0 ? MARK : INK}
+          fillOpacity={i % 2 === 0 ? 0.18 : 0.1}
+          stroke={i % 2 === 0 ? MARK : INK}
+          strokeOpacity="0.45"
+          strokeWidth="1.8"
+        />
+      ))}
+      <motion.circle
+        r="7"
+        cy="92"
+        fill={INK}
+        initial={{ cx: 250 }}
+        animate={still ? { cx: 158 } : { cx: [250, 204, 158, 112, 66] }}
+        transition={still ? {} : loop(5)}
+      />
+      <text x="56" y="134" fill={INK} fillOpacity="0.45" fontSize="11" fontFamily="monospace">
+        анализ с конца
+      </text>
+    </Sheet>
+  )
+}
+
+function Divisibility({ still }) {
+  return (
+    <Sheet caption="a = bq + r">
+      <rect x="50" y="76" width="200" height="30" rx="3" fill={INK} fillOpacity="0.08" stroke={INK} strokeOpacity="0.35" strokeWidth="1.5" />
+      {[0, 1, 2].map((i) => (
+        <motion.rect
+          key={i}
+          x={50 + i * 60}
+          y="76"
+          width="60"
+          height="30"
+          fill={MARK}
+          fillOpacity="0.2"
+          stroke={MARK}
+          strokeOpacity="0.45"
+          strokeWidth="1.4"
+          initial={{ opacity: still ? 1 : 0 }}
+          animate={still ? {} : { opacity: [0, 1, 1] }}
+          transition={still ? {} : loop(4, { delay: i * 0.4, times: [0, 0.2, 1] })}
+        />
+      ))}
+      <rect x="230" y="76" width="20" height="30" fill={INK} fillOpacity="0.25" />
+      <text x="228" y="124" fill={INK} fillOpacity="0.5" fontSize="11" fontFamily="monospace">
+        r
+      </text>
+    </Sheet>
+  )
+}
+
+function Primes({ still }) {
+  const nums = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+  const isPrime = (n) => [2, 3, 5, 7, 11, 13].includes(n)
+  return (
+    <Sheet caption="решето: остаются простые">
+      {nums.map((n, i) => (
+        <motion.g key={n}>
+          <rect
+            x={50 + (i % 7) * 32}
+            y={58 + Math.floor(i / 7) * 36}
+            width="26"
+            height="26"
+            rx="3"
+            fill="none"
+            stroke={INK}
+            strokeOpacity="0.3"
+          />
+          <text
+            x={56 + (i % 7) * 32}
+            y={76 + Math.floor(i / 7) * 36}
+            fill={isPrime(n) ? MARK : INK}
+            fillOpacity={isPrime(n) ? 0.95 : 0.35}
+            fontSize="12"
+            fontFamily="monospace"
+          >
+            {n}
+          </text>
+          {!isPrime(n) && (
+            <motion.line
+              x1={50 + (i % 7) * 32}
+              y1={58 + Math.floor(i / 7) * 36}
+              x2={76 + (i % 7) * 32}
+              y2={84 + Math.floor(i / 7) * 36}
+              stroke={INK}
+              strokeOpacity="0.35"
+              strokeWidth="1.6"
+              initial={{ pathLength: still ? 1 : 0 }}
+              animate={still ? {} : { pathLength: [0, 1, 1] }}
+              transition={still ? {} : loop(4, { delay: (i % 7) * 0.12, times: [0, 0.4, 1] })}
+            />
+          )}
+        </motion.g>
+      ))}
+    </Sheet>
+  )
+}
+
+function Congruence({ still }) {
+  const R = 50
+  return (
+    <Sheet caption="остатки по кругу">
+      <circle cx="160" cy="90" r={R} fill="none" stroke={INK} strokeOpacity="0.3" strokeWidth="1.6" />
+      {[0, 1, 2, 3, 4].map((i) => {
+        const a = (i / 5) * 2 * Math.PI - Math.PI / 2
+        return (
+          <text
+            key={i}
+            x={160 + (R + 16) * Math.cos(a) - 4}
+            y={90 + (R + 16) * Math.sin(a) + 4}
+            fill={INK}
+            fillOpacity="0.45"
+            fontSize="12"
+            fontFamily="monospace"
+          >
+            {i}
+          </text>
+        )
+      })}
+      <motion.g
+        style={{ originX: '160px', originY: '90px' }}
+        initial={{ rotate: 0 }}
+        animate={still ? { rotate: 144 } : { rotate: [0, 72, 144, 216, 288, 360] }}
+        transition={still ? {} : loop(5, { ease: 'easeInOut' })}
+      >
+        <circle cx="160" cy={90 - R} r="7" fill={MARK} />
+      </motion.g>
+    </Sheet>
+  )
+}
+
+function Numeral({ still }) {
+  return (
+    <Sheet caption="сумма цифр и остаток">
+      {['3', '7', '4', '8'].map((d, i) => (
+        <text key={i} x={78 + i * 40} y="80" fill={INK} fillOpacity="0.7" fontSize="26" fontFamily="monospace">
+          {d}
+        </text>
+      ))}
+      <motion.g
+        initial={{ opacity: still ? 1 : 0 }}
+        animate={still ? {} : { opacity: [0, 1, 1, 0] }}
+        transition={still ? {} : loop(4.5, { times: [0, 0.35, 0.8, 1] })}
+      >
+        <line x1="78" y1="94" x2="226" y2="94" stroke={MARK} strokeOpacity="0.6" strokeWidth="2" />
+        <text x="132" y="124" fill={MARK} fillOpacity="0.85" fontSize="15" fontFamily="monospace">
+          3+7+4+8 = 22
+        </text>
+      </motion.g>
+    </Sheet>
+  )
+}
+
+function DiophantineFig({ still }) {
+  return (
+    <Sheet caption="целые точки на прямой">
+      <Axis />
+      <line x1="30" y1="36" x2="286" y2="148" stroke={INK} strokeOpacity="0.4" strokeWidth="2" />
+      {[0, 1, 2, 3].map((i) => (
+        <motion.circle
+          key={i}
+          r="6"
+          fill={MARK}
+          cx={66 + i * 60}
+          cy={52 + i * 26}
+          initial={{ scale: still ? 1 : 0 }}
+          animate={still ? {} : { scale: [0, 1.25, 1] }}
+          transition={still ? {} : loop(3.6, { delay: i * 0.3 })}
+        />
+      ))}
+      {[0, 1, 2, 3, 4].map((i) =>
+        [0, 1, 2, 3].map((j) => (
+          <circle key={`${i}-${j}`} cx={66 + i * 60} cy={52 + j * 26} r="1.6" fill={INK} fillOpacity="0.25" />
+        ))
+      )}
+    </Sheet>
+  )
+}
+
+function Fibonacci({ still }) {
+  const sizes = [10, 10, 20, 30, 50]
+  return (
+    <Sheet caption="F_{n+1} = F_n + F_{n−1}">
+      {sizes.map((s, i) => (
+        <motion.rect
+          key={i}
+          x={56 + sizes.slice(0, i).reduce((a, b) => a + b, 0)}
+          y={130 - s}
+          width={s}
+          height={s}
+          fill={i === sizes.length - 1 ? MARK : INK}
+          fillOpacity={i === sizes.length - 1 ? 0.3 : 0.14}
+          stroke={INK}
+          strokeOpacity="0.35"
+          strokeWidth="1.4"
+          initial={{ opacity: still ? 1 : 0, scale: still ? 1 : 0.6 }}
+          animate={still ? {} : { opacity: [0, 1, 1], scale: [0.6, 1, 1] }}
+          transition={still ? {} : loop(5, { delay: i * 0.4, times: [0, 0.25, 1] })}
+        />
+      ))}
+      <text x="190" y="60" fill={INK} fillOpacity="0.45" fontSize="12" fontFamily="monospace">
+        1 1 2 3 5
+      </text>
+    </Sheet>
+  )
+}
+
+function Counting({ still }) {
+  return (
+    <Sheet caption="правило произведения">
+      {[0, 1, 2].map((i) => (
+        <circle key={`a-${i}`} cx="80" cy={48 + i * 42} r="10" fill={MARK} fillOpacity="0.7" />
+      ))}
+      {[0, 1].map((j) => (
+        <circle key={`b-${j}`} cx="240" cy={66 + j * 52} r="10" fill={INK} fillOpacity="0.55" />
+      ))}
+      {[0, 1, 2].map((i) =>
+        [0, 1].map((j) => (
+          <motion.line
+            key={`${i}-${j}`}
+            x1="92"
+            y1={48 + i * 42}
+            x2="228"
+            y2={66 + j * 52}
+            stroke={INK}
+            strokeOpacity="0.3"
+            strokeWidth="1.4"
+            initial={{ pathLength: still ? 1 : 0 }}
+            animate={still ? {} : { pathLength: [0, 1, 1] }}
+            transition={still ? {} : loop(4.5, { delay: (i * 2 + j) * 0.2, times: [0, 0.4, 1] })}
+          />
+        ))
+      )}
+      <text x="126" y="146" fill={INK} fillOpacity="0.45" fontSize="12" fontFamily="monospace">
+        3 × 2 = 6
+      </text>
+    </Sheet>
+  )
+}
+
+function Bijection({ still }) {
+  return (
+    <Sheet caption="взаимно однозначное соответствие">
+      {[0, 1, 2, 3].map((i) => (
+        <g key={i}>
+          <circle cx="86" cy={44 + i * 34} r="8" fill={MARK} fillOpacity="0.7" />
+          <circle cx="234" cy={44 + i * 34} r="8" fill={INK} fillOpacity="0.5" />
+          <motion.line
+            x1="96"
+            y1={44 + i * 34}
+            x2="224"
+            y2={44 + i * 34}
+            stroke={INK}
+            strokeOpacity="0.4"
+            strokeWidth="1.8"
+            initial={{ pathLength: still ? 1 : 0 }}
+            animate={still ? {} : { pathLength: [0, 1, 1, 0] }}
+            transition={still ? {} : loop(4, { delay: i * 0.25, times: [0, 0.3, 0.8, 1] })}
+          />
+        </g>
+      ))}
+    </Sheet>
+  )
+}
+
+function GraphFig({ still }) {
+  const nodes = [
+    [90, 54], [230, 54], [160, 100], [96, 140], [232, 140],
+  ]
+  const edges = [
+    [0, 1], [0, 2], [1, 2], [2, 3], [2, 4], [3, 4],
+  ]
+  return (
+    <Sheet caption="Σ deg v = 2E">
+      {edges.map(([a, b], i) => (
+        <motion.line
+          key={i}
+          x1={nodes[a][0]}
+          y1={nodes[a][1]}
+          x2={nodes[b][0]}
+          y2={nodes[b][1]}
+          stroke={INK}
+          strokeOpacity="0.35"
+          strokeWidth="1.8"
+          initial={{ pathLength: still ? 1 : 0 }}
+          animate={still ? {} : { pathLength: [0, 1, 1] }}
+          transition={still ? {} : loop(5, { delay: i * 0.2, times: [0, 0.3, 1] })}
+        />
+      ))}
+      {nodes.map(([x, y], i) => (
+        <circle key={i} cx={x} cy={y} r="9" fill={i === 2 ? MARK : INK} fillOpacity={i === 2 ? 0.9 : 0.6} />
+      ))}
+    </Sheet>
+  )
+}
+
+function Tiling({ still }) {
+  return (
+    <Sheet caption="замощение доминошками">
+      {Array.from({ length: 16 }).map((_, i) => {
+        const r = Math.floor(i / 4)
+        const c = i % 4
+        return (
+          <rect
+            key={i}
+            x={110 + c * 26}
+            y={40 + r * 26}
+            width="26"
+            height="26"
+            fill={(r + c) % 2 ? INK : '#fff'}
+            fillOpacity={(r + c) % 2 ? 0.14 : 1}
+            stroke={INK}
+            strokeOpacity="0.22"
+          />
+        )
+      })}
+      {[0, 1, 2].map((i) => (
+        <motion.rect
+          key={i}
+          x={112 + (i % 2) * 52}
+          y={42 + i * 26}
+          width="48"
+          height="22"
+          rx="3"
+          fill={MARK}
+          fillOpacity="0.3"
+          stroke={MARK}
+          strokeOpacity="0.55"
+          strokeWidth="1.4"
+          initial={{ opacity: still ? 1 : 0 }}
+          animate={still ? {} : { opacity: [0, 1, 1, 0] }}
+          transition={still ? {} : loop(4.5, { delay: i * 0.4, times: [0, 0.25, 0.8, 1] })}
+        />
+      ))}
+    </Sheet>
+  )
+}
+
+function CombGeo({ still }) {
+  const pts = [
+    [70, 120], [110, 54], [180, 42], [244, 86], [220, 140], [150, 96],
+  ]
+  return (
+    <Sheet caption="выпуклая оболочка">
+      <motion.polygon
+        points="70,120 110,54 180,42 244,86 220,140"
+        fill={MARK}
+        fillOpacity="0.08"
+        stroke={MARK}
+        strokeOpacity="0.55"
+        strokeWidth="1.8"
+        initial={{ pathLength: still ? 1 : 0 }}
+        animate={still ? {} : { pathLength: [0, 1, 1] }}
+        transition={still ? {} : loop(5, { times: [0, 0.6, 1] })}
+      />
+      {pts.map(([x, y], i) => (
+        <circle key={i} cx={x} cy={y} r="5.5" fill={i === 5 ? INK : MARK} fillOpacity={i === 5 ? 0.45 : 0.9} />
+      ))}
+    </Sheet>
+  )
+}
+
+function ParabolaFig({ still }) {
+  return (
+    <Sheet caption="корни и вершина">
+      <Axis />
+      <path d="M50 40 Q160 190 268 40" fill="none" stroke={INK} strokeOpacity="0.45" strokeWidth="2.2" />
+      <line x1="24" y1="112" x2="300" y2="112" stroke={INK} strokeOpacity="0.25" strokeWidth="1.4" />
+      {[86, 234].map((x, i) => (
+        <motion.circle
+          key={x}
+          cx={x}
+          cy="112"
+          r="6"
+          fill={MARK}
+          initial={{ scale: still ? 1 : 0 }}
+          animate={still ? {} : { scale: [0, 1.3, 1] }}
+          transition={still ? {} : loop(3.4, { delay: i * 0.3 })}
+        />
+      ))}
+      <circle cx="160" cy="152" r="4" fill={INK} fillOpacity="0.5" />
+    </Sheet>
+  )
+}
+
+function Means({ still }) {
+  return (
+    <Sheet caption="AM ≥ GM">
+      <line x1="50" y1="134" x2="270" y2="134" stroke={INK} strokeOpacity="0.35" strokeWidth="1.6" />
+      <rect x="50" y="88" width="80" height="46" fill={INK} fillOpacity="0.12" stroke={INK} strokeOpacity="0.35" />
+      <rect x="130" y="54" width="140" height="80" fill={MARK} fillOpacity="0.1" stroke={MARK} strokeOpacity="0.35" />
+      <motion.line
+        y1="70"
+        y2="70"
+        stroke={INK}
+        strokeOpacity="0.55"
+        strokeWidth="2.4"
+        initial={{ x1: 50, x2: 270 }}
+        animate={still ? {} : { x1: [50, 50], x2: [270, 270] }}
+        transition={still ? {} : loop(4)}
+      />
+      <motion.line
+        y1="44"
+        y2="44"
+        stroke={MARK}
+        strokeWidth="2.4"
+        initial={{ x1: 86, x2: 234 }}
+        animate={still ? {} : { x1: [86, 70, 86], x2: [234, 250, 234] }}
+        transition={still ? {} : loop(4, { ease: 'easeInOut' })}
+      />
+      <text x="54" y="36" fill={MARK} fillOpacity="0.8" fontSize="11" fontFamily="monospace">
+        среднее ≥ √(ab)
+      </text>
+    </Sheet>
+  )
+}
+
+function Intervals({ still }) {
+  const marks = [84, 146, 212]
+  return (
+    <Sheet caption="метод интервалов">
+      <line x1="34" y1="92" x2="288" y2="92" stroke={INK} strokeOpacity="0.45" strokeWidth="1.8" />
+      {marks.map((x, i) => (
+        <circle key={x} cx={x} cy="92" r="5.5" fill={INK} fillOpacity="0.7" />
+      ))}
+      {[[34, 84], [84, 146], [146, 212], [212, 288]].map(([a, b], i) => (
+        <motion.rect
+          key={i}
+          x={a}
+          y={i % 2 ? 94 : 72}
+          width={b - a}
+          height="18"
+          fill={i % 2 ? INK : MARK}
+          fillOpacity={i % 2 ? 0.18 : 0.22}
+          initial={{ opacity: still ? 1 : 0 }}
+          animate={still ? {} : { opacity: [0, 1, 1] }}
+          transition={still ? {} : loop(4, { delay: i * 0.35, times: [0, 0.25, 1] })}
+        />
+      ))}
+      <text x="40" y="132" fill={INK} fillOpacity="0.45" fontSize="11" fontFamily="monospace">
+        знаки чередуются
+      </text>
+    </Sheet>
+  )
+}
+
+function Parameter({ still }) {
+  return (
+    <Sheet caption="прямая y = a и график">
+      <Axis />
+      <path d="M44 128 Q94 36 160 92 Q226 148 286 54" fill="none" stroke={INK} strokeOpacity="0.45" strokeWidth="2.2" />
+      <motion.line
+        x1="24"
+        x2="300"
+        stroke={MARK}
+        strokeWidth="2.2"
+        initial={{ y1: 60, y2: 60 }}
+        animate={still ? { y1: 92, y2: 92 } : { y1: [52, 128, 52], y2: [52, 128, 52] }}
+        transition={still ? {} : loop(6, { ease: 'easeInOut' })}
+      />
+      <text x="248" y="36" fill={MARK} fillOpacity="0.8" fontSize="12" fontFamily="monospace">
+        y = a
+      </text>
+    </Sheet>
+  )
+}
+
+function Monotone({ still }) {
+  return (
+    <Sheet caption="монотонные части пересекаются раз">
+      <Axis />
+      <path d="M40 140 Q160 120 286 40" fill="none" stroke={INK} strokeOpacity="0.45" strokeWidth="2.2" />
+      <path d="M40 44 Q160 70 286 142" fill="none" stroke={MARK} strokeOpacity="0.55" strokeWidth="2.2" />
+      <motion.circle
+        cx="166"
+        cy="98"
+        r="7"
+        fill={MARK}
+        initial={{ scale: still ? 1 : 0 }}
+        animate={still ? {} : { scale: [0, 0, 1.25, 1] }}
+        transition={still ? {} : loop(4, { times: [0, 0.5, 0.65, 1] })}
+      />
+    </Sheet>
+  )
+}
+
+function Iteration({ still }) {
+  return (
+    <Sheet caption="x → f(x) → f(f(x))">
+      <Axis />
+      <line x1="30" y1="148" x2="290" y2="34" stroke={INK} strokeOpacity="0.25" strokeDasharray="5 4" />
+      <path d="M40 132 Q140 66 286 50" fill="none" stroke={INK} strokeOpacity="0.45" strokeWidth="2" />
+      {[0, 1, 2].map((i) => (
+        <motion.circle
+          key={i}
+          r="5.5"
+          fill={MARK}
+          initial={{ cx: 70 + i * 48, cy: 118 - i * 24 }}
+          animate={still ? {} : { opacity: [0, 1, 1] }}
+          transition={still ? {} : loop(4, { delay: i * 0.5, times: [0, 0.3, 1] })}
+        />
+      ))}
+    </Sheet>
+  )
+}
+
+function Similar({ still }) {
+  return (
+    <Sheet caption="подобие даёт пропорции">
+      <polygon points="54,140 180,140 96,56" fill={INK} fillOpacity="0.07" stroke={INK} strokeOpacity="0.45" strokeWidth="1.8" />
+      <motion.polygon
+        points="196,140 280,140 224,84"
+        fill={MARK}
+        fillOpacity="0.1"
+        stroke={MARK}
+        strokeOpacity="0.55"
+        strokeWidth="1.8"
+        initial={{ scale: still ? 1 : 0.85 }}
+        style={{ originX: '238px', originY: '112px' }}
+        animate={still ? {} : { scale: [0.85, 1.05, 0.85] }}
+        transition={still ? {} : loop(4, { ease: 'easeInOut' })}
+      />
+      <text x="206" y="40" fill={MARK} fillOpacity="0.8" fontSize="11" fontFamily="monospace">
+        k
+      </text>
+    </Sheet>
+  )
+}
+
+function Areas({ still }) {
+  return (
+    <Sheet caption="медиана делит площадь пополам">
+      <polygon points="56,140 264,140 150,46" fill="none" stroke={INK} strokeOpacity="0.45" strokeWidth="1.8" />
+      <line x1="150" y1="46" x2="160" y2="140" stroke={INK} strokeOpacity="0.4" strokeWidth="1.6" />
+      <motion.polygon
+        points="56,140 160,140 150,46"
+        fill={MARK}
+        fillOpacity="0.16"
+        initial={{ opacity: still ? 1 : 0.2 }}
+        animate={still ? {} : { opacity: [0.2, 0.9, 0.2] }}
+        transition={still ? {} : loop(3.4)}
+      />
+      <motion.polygon
+        points="160,140 264,140 150,46"
+        fill={INK}
+        fillOpacity="0.12"
+        initial={{ opacity: still ? 1 : 0.9 }}
+        animate={still ? {} : { opacity: [0.9, 0.2, 0.9] }}
+        transition={still ? {} : loop(3.4)}
+      />
+    </Sheet>
+  )
+}
+
+function CircleAngle({ still }) {
+  return (
+    <Sheet caption="углы на одну дугу равны">
+      <circle cx="160" cy="92" r="60" fill="none" stroke={INK} strokeOpacity="0.4" strokeWidth="1.8" />
+      <line x1="112" y1="128" x2="208" y2="128" stroke={MARK} strokeWidth="2.4" />
+      {[[134, 36], [196, 40]].map(([x, y], i) => (
+        <motion.g
+          key={i}
+          initial={{ opacity: still ? 1 : 0.25 }}
+          animate={still ? {} : { opacity: [0.25, 1, 0.25] }}
+          transition={still ? {} : loop(3.6, { delay: i * 0.6 })}
+        >
+          <line x1={x} y1={y} x2="112" y2="128" stroke={INK} strokeOpacity="0.45" strokeWidth="1.6" />
+          <line x1={x} y1={y} x2="208" y2="128" stroke={INK} strokeOpacity="0.45" strokeWidth="1.6" />
+          <circle cx={x} cy={y} r="5" fill={INK} fillOpacity="0.7" />
+        </motion.g>
+      ))}
+    </Sheet>
+  )
+}
+
+function Incircle({ still }) {
+  return (
+    <Sheet caption="S = pr">
+      <polygon points="56,140 268,140 150,42" fill="none" stroke={INK} strokeOpacity="0.45" strokeWidth="1.8" />
+      <motion.circle
+        cx="152"
+        cy="108"
+        r="31"
+        fill={MARK}
+        fillOpacity="0.1"
+        stroke={MARK}
+        strokeOpacity="0.55"
+        strokeWidth="1.8"
+        initial={{ scale: still ? 1 : 0.9 }}
+        style={{ originX: '152px', originY: '108px' }}
+        animate={still ? {} : { scale: [0.9, 1, 0.9] }}
+        transition={still ? {} : loop(3.6, { ease: 'easeInOut' })}
+      />
+      <line x1="152" y1="108" x2="152" y2="140" stroke={MARK} strokeOpacity="0.7" strokeWidth="1.8" />
+      <text x="158" y="128" fill={MARK} fillOpacity="0.8" fontSize="11" fontFamily="monospace">
+        r
+      </text>
+    </Sheet>
+  )
+}
+
+function Cheva({ still }) {
+  return (
+    <Sheet caption="три чевианы в одной точке">
+      <polygon points="54,142 266,142 150,40" fill="none" stroke={INK} strokeOpacity="0.45" strokeWidth="1.8" />
+      {[
+        ['150,40', '170,142'],
+        ['54,142', '214,92'],
+        ['266,142', '104,92'],
+      ].map(([from, to], i) => {
+        const [x1, y1] = from.split(',').map(Number)
+        const [x2, y2] = to.split(',').map(Number)
+        return (
+          <motion.line
+            key={i}
+            x1={x1}
+            y1={y1}
+            x2={x2}
+            y2={y2}
+            stroke={MARK}
+            strokeOpacity="0.5"
+            strokeWidth="1.6"
+            initial={{ pathLength: still ? 1 : 0 }}
+            animate={still ? {} : { pathLength: [0, 1, 1] }}
+            transition={still ? {} : loop(4.5, { delay: i * 0.35, times: [0, 0.4, 1] })}
+          />
+        )
+      })}
+      <circle cx="158" cy="110" r="5" fill={MARK} />
+    </Sheet>
+  )
+}
+
+function Radical({ still }) {
+  return (
+    <Sheet caption="радикальная ось">
+      <circle cx="116" cy="92" r="48" fill="none" stroke={INK} strokeOpacity="0.4" strokeWidth="1.8" />
+      <circle cx="212" cy="92" r="40" fill="none" stroke={INK} strokeOpacity="0.4" strokeWidth="1.8" />
+      <motion.line
+        x1="166"
+        y1="24"
+        x2="166"
+        y2="158"
+        stroke={MARK}
+        strokeWidth="2.4"
+        initial={{ pathLength: still ? 1 : 0 }}
+        animate={still ? {} : { pathLength: [0, 1, 1, 0] }}
+        transition={still ? {} : loop(4.5, { times: [0, 0.35, 0.8, 1] })}
+      />
+      <line x1="116" y1="92" x2="212" y2="92" stroke={INK} strokeOpacity="0.25" strokeDasharray="4 4" />
+    </Sheet>
+  )
+}
+
+function SymmetryGeo({ still }) {
+  return (
+    <Sheet caption="отражение выпрямляет путь">
+      <line x1="30" y1="112" x2="290" y2="112" stroke={INK} strokeOpacity="0.45" strokeWidth="2" />
+      <circle cx="86" cy="62" r="7" fill={MARK} />
+      <circle cx="232" cy="74" r="7" fill={MARK} />
+      <motion.circle
+        cx="232"
+        cy="150"
+        r="7"
+        fill={MARK}
+        fillOpacity="0.35"
+        initial={{ opacity: still ? 1 : 0 }}
+        animate={still ? {} : { opacity: [0, 1, 1] }}
+        transition={still ? {} : loop(4.5, { times: [0, 0.35, 1] })}
+      />
+      <path d="M86 62 L150 112 L232 74" fill="none" stroke={INK} strokeOpacity="0.5" strokeWidth="1.8" />
+      <motion.line
+        x1="86"
+        y1="62"
+        x2="232"
+        y2="150"
+        stroke={INK}
+        strokeOpacity="0.28"
+        strokeDasharray="5 4"
+        strokeWidth="1.6"
+        initial={{ pathLength: still ? 1 : 0 }}
+        animate={still ? {} : { pathLength: [0, 0, 1, 1] }}
+        transition={still ? {} : loop(4.5, { times: [0, 0.35, 0.7, 1] })}
+      />
+    </Sheet>
+  )
+}
+
+function Rotation({ still }) {
+  return (
+    <Sheet caption="поворот на 60°">
+      <polygon points="120,140 200,140 160,72" fill={INK} fillOpacity="0.08" stroke={INK} strokeOpacity="0.45" strokeWidth="1.8" />
+      <motion.polygon
+        points="120,140 200,140 160,72"
+        fill={MARK}
+        fillOpacity="0.1"
+        stroke={MARK}
+        strokeOpacity="0.5"
+        strokeWidth="1.8"
+        style={{ originX: '160px', originY: '140px' }}
+        initial={{ rotate: 0 }}
+        animate={still ? { rotate: 60 } : { rotate: [0, 60, 120, 180, 240, 300, 360] }}
+        transition={still ? {} : loop(7, { ease: 'easeInOut' })}
+      />
+      <circle cx="160" cy="140" r="4" fill={INK} />
+    </Sheet>
+  )
+}
+
+function Euler({ still }) {
+  return (
+    <Sheet caption="прямая Эйлера: O, G, H">
+      <polygon points="54,140 262,140 136,42" fill="none" stroke={INK} strokeOpacity="0.4" strokeWidth="1.8" />
+      <motion.line
+        x1="84"
+        y1="122"
+        x2="248"
+        y2="76"
+        stroke={MARK}
+        strokeWidth="2.2"
+        initial={{ pathLength: still ? 1 : 0 }}
+        animate={still ? {} : { pathLength: [0, 1, 1] }}
+        transition={still ? {} : loop(4.5, { times: [0, 0.6, 1] })}
+      />
+      {[[108, 114], [150, 102], [226, 82]].map(([x, y], i) => (
+        <motion.circle
+          key={i}
+          cx={x}
+          cy={y}
+          r="5.5"
+          fill={MARK}
+          initial={{ scale: still ? 1 : 0 }}
+          animate={still ? {} : { scale: [0, 0, 1.2, 1] }}
+          transition={still ? {} : loop(4.5, { delay: i * 0.25, times: [0, 0.5, 0.65, 1] })}
+        />
+      ))}
+    </Sheet>
+  )
+}
+
+function Inversion({ still }) {
+  return (
+    <Sheet caption="OX·OX′ = R²">
+      <circle cx="160" cy="92" r="52" fill="none" stroke={INK} strokeOpacity="0.4" strokeWidth="1.8" />
+      <circle cx="160" cy="92" r="4" fill={INK} />
+      <line x1="160" y1="92" x2="290" y2="92" stroke={INK} strokeOpacity="0.25" strokeDasharray="4 4" />
+      <motion.circle
+        r="6.5"
+        cy="92"
+        fill={MARK}
+        initial={{ cx: 200 }}
+        animate={still ? { cx: 190 } : { cx: [200, 240, 200] }}
+        transition={still ? {} : loop(4.5, { ease: 'easeInOut' })}
+      />
+      <motion.circle
+        r="6.5"
+        cy="92"
+        fill={MARK}
+        fillOpacity="0.45"
+        initial={{ cx: 228 }}
+        animate={still ? { cx: 234 } : { cx: [228, 203, 228] }}
+        transition={still ? {} : loop(4.5, { ease: 'easeInOut' })}
+      />
+    </Sheet>
+  )
+}
+
+function Conic({ still }) {
+  return (
+    <Sheet caption="фокусы и отражение">
+      <ellipse cx="160" cy="92" rx="110" ry="54" fill="none" stroke={INK} strokeOpacity="0.45" strokeWidth="2" />
+      <circle cx="104" cy="92" r="4.5" fill={MARK} />
+      <circle cx="216" cy="92" r="4.5" fill={MARK} />
+      <motion.g
+        initial={{ opacity: still ? 1 : 0.3 }}
+        animate={still ? {} : { opacity: [0.3, 1, 0.3] }}
+        transition={still ? {} : loop(3.6)}
+      >
+        <line x1="104" y1="92" x2="186" y2="44" stroke={MARK} strokeOpacity="0.6" strokeWidth="1.8" />
+        <line x1="186" y1="44" x2="216" y2="92" stroke={MARK} strokeOpacity="0.6" strokeWidth="1.8" />
+      </motion.g>
+    </Sheet>
+  )
+}
+
+function ComplexPlane({ still }) {
+  return (
+    <Sheet caption="умножение — поворот">
+      <line x1="30" y1="92" x2="290" y2="92" stroke={INK} strokeOpacity="0.3" strokeWidth="1.4" />
+      <line x1="160" y1="24" x2="160" y2="158" stroke={INK} strokeOpacity="0.3" strokeWidth="1.4" />
+      <circle cx="160" cy="92" r="52" fill="none" stroke={INK} strokeOpacity="0.2" strokeDasharray="4 4" />
+      <motion.g
+        style={{ originX: '160px', originY: '92px' }}
+        initial={{ rotate: 0 }}
+        animate={still ? { rotate: 50 } : { rotate: 360 }}
+        transition={still ? {} : loop(6)}
+      >
+        <line x1="160" y1="92" x2="212" y2="92" stroke={MARK} strokeWidth="2.4" />
+        <circle cx="212" cy="92" r="6" fill={MARK} />
+      </motion.g>
+    </Sheet>
+  )
+}
+
+function Solid({ still }) {
+  return (
+    <Sheet caption="сечение многогранника">
+      <polygon points="80,130 200,130 240,96 120,96" fill={INK} fillOpacity="0.06" stroke={INK} strokeOpacity="0.4" strokeWidth="1.6" />
+      <polygon points="80,60 200,60 240,26 120,26" fill="none" stroke={INK} strokeOpacity="0.4" strokeWidth="1.6" />
+      <line x1="80" y1="130" x2="80" y2="60" stroke={INK} strokeOpacity="0.4" strokeWidth="1.6" />
+      <line x1="200" y1="130" x2="200" y2="60" stroke={INK} strokeOpacity="0.4" strokeWidth="1.6" />
+      <line x1="240" y1="96" x2="240" y2="26" stroke={INK} strokeOpacity="0.4" strokeWidth="1.6" />
+      <line x1="120" y1="96" x2="120" y2="26" stroke={INK} strokeOpacity="0.25" strokeWidth="1.4" strokeDasharray="4 4" />
+      <motion.polygon
+        points="80,96 200,96 240,62 120,62"
+        fill={MARK}
+        fillOpacity="0.16"
+        stroke={MARK}
+        strokeOpacity="0.6"
+        strokeWidth="1.8"
+        initial={{ opacity: still ? 1 : 0 }}
+        animate={still ? {} : { opacity: [0, 1, 1, 0] }}
+        transition={still ? {} : loop(5, { times: [0, 0.3, 0.8, 1] })}
+      />
+    </Sheet>
+  )
+}
+
 function Blank() {
   return (
     <Sheet caption="конспект без иллюстрации">
@@ -2203,6 +3236,44 @@ const FIGURES = {
   mirror: Mirror,
   refraction: Refraction,
   lens: Lens,
+  chessboard: Chessboard,
+  contradiction: Contradiction,
+  reverse: Reverse,
+  pigeonhole: Pigeonhole,
+  induction: Induction,
+  invariant: Invariant,
+  extremal: Extremal,
+  game: Game,
+  divisibility: Divisibility,
+  primes: Primes,
+  congruence: Congruence,
+  numeral: Numeral,
+  diophantine: DiophantineFig,
+  fibonacci: Fibonacci,
+  counting: Counting,
+  bijection: Bijection,
+  graph: GraphFig,
+  tiling: Tiling,
+  combgeo: CombGeo,
+  parabola: ParabolaFig,
+  means: Means,
+  intervals: Intervals,
+  parameter: Parameter,
+  monotone: Monotone,
+  iteration: Iteration,
+  similar: Similar,
+  areas: Areas,
+  circleangle: CircleAngle,
+  incircle: Incircle,
+  cheva: Cheva,
+  radical: Radical,
+  symmetrygeo: SymmetryGeo,
+  rotation: Rotation,
+  euler: Euler,
+  inversion: Inversion,
+  conic: Conic,
+  complex: ComplexPlane,
+  solid: Solid,
 }
 
 export default function TheoryFigure({ name }) {
