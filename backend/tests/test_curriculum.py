@@ -115,3 +115,34 @@ async def test_lesson_problem_assets_exist(client):
 async def test_lesson_problems_unknown_lesson(client):
     response = await client.get("/api/curriculum/lessons/nope/problems")
     assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_every_lesson_has_theory(client):
+    """Конспект написан к каждой подтеме — это обещание страницы «Темы»."""
+    for subject in ("physics", "math"):
+        topics = (await client.get("/api/curriculum", params={"subject": subject})).json()
+        lessons = [lesson for topic in topics for lesson in topic["lessons"]]
+        without = [lesson["id"] for lesson in lessons if not lesson["has_theory"]]
+        assert not without, f"{subject}: без конспекта {without[:5]}"
+
+
+@pytest.mark.asyncio
+async def test_theory_page_is_complete(client):
+    """У конспекта есть текст, тезисы и известная фронтенду анимация."""
+    import io
+    import re
+    from pathlib import Path
+
+    figures_source = (
+        Path(__file__).resolve().parents[2] / "src" / "components" / "TheoryFigure.jsx"
+    )
+    known = set(re.findall(r"^  ([a-z]+): [A-Za-z]", io.open(figures_source, encoding="utf-8").read(), re.M))
+
+    topics = (await client.get("/api/curriculum")).json()
+    for lesson in [lesson for topic in topics for lesson in topic["lessons"]][:12]:
+        body = (await client.get(f"/api/curriculum/lessons/{lesson['id']}/theory")).json()
+        assert body["summary"]
+        assert len(body["points"]) >= 3
+        # Неизвестный ключ фигуры не сломает страницу, но покажет пустую заставку.
+        assert body["figure"] in known, f"{lesson['id']}: нет анимации {body['figure']}"

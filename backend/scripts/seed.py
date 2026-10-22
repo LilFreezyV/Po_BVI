@@ -43,6 +43,7 @@ from scripts.bvi_data import OLYMPIADS as BVI_OLYMPIADS
 from scripts.bvi_data import UNIVERSITIES as BVI_UNIVERSITIES
 from scripts.curriculum_data import CURRICULUM
 from scripts.curriculum_topics import TOPICS as PHYSICS_TOPICS
+from scripts.theory_math import THEORY as THEORY_MATH
 from scripts.theory_physics import THEORY as THEORY_PHYSICS
 from scripts.curriculum_topics import auto_topics, parse_ref
 from scripts import literature_math
@@ -259,7 +260,7 @@ async def seed() -> None:
         # литература. Предмет в ключе обязателен — номера занятий у физики и математики свои.
         ref_to_lesson: dict[tuple[str, int, int], str] = {}
 
-        THEORY = {"physics": THEORY_PHYSICS}
+        THEORY = {"physics": THEORY_PHYSICS, "math": THEORY_MATH}
         subjects = {course["subject"] for course in CURRICULUM}
         await session.execute(delete(CurriculumModule).where(CurriculumModule.subject.in_(subjects)))
         await session.flush()
