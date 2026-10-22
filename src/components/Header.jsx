@@ -3,10 +3,11 @@ import { Icon, Link, Logo, navigate } from './ui.jsx'
 import { useAuth } from '../lib/auth.jsx'
 
 const NAV = [
-  { to: '/program', label: 'Программа' },
-  { to: '/catalog', label: 'Каталог тем' },
+  { to: '/catalog', label: 'Темы' },
+  { to: '/program', label: 'Задачи по темам' },
   { to: '/bvi', label: 'БВИ и вузы' },
   { to: '/archive', label: 'Архив заданий' },
+  { to: '/tiktok', label: 'Из тиктока' },
   { to: '/progress', label: 'Мой прогресс' },
   { to: '/#pricing', label: 'Тарифы' },
 ]
@@ -25,7 +26,12 @@ export default function Header({ route }) {
 
   useEffect(() => setOpen(false), [route])
 
-  const isActive = (to) => (to === '/catalog' ? route.startsWith('/catalog') || route.startsWith('/topic') : route === to)
+  const isActive = (to) =>
+    to === '/catalog'
+      ? route.startsWith('/catalog') || route.startsWith('/theory')
+      : to === '/program'
+        ? route.startsWith('/program') || route.startsWith('/topic')
+        : route === to
 
   return (
     <header

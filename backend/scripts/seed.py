@@ -19,6 +19,7 @@ from app.models.content import (
     BviOlympiad,
     BviUniversity,
     CurriculumLesson,
+    CurriculumLessonPoint,
     CurriculumModule,
     LessonProblem,
     LessonReference,
@@ -42,6 +43,7 @@ from scripts.bvi_data import OLYMPIADS as BVI_OLYMPIADS
 from scripts.bvi_data import UNIVERSITIES as BVI_UNIVERSITIES
 from scripts.curriculum_data import CURRICULUM
 from scripts.curriculum_topics import TOPICS as PHYSICS_TOPICS
+from scripts.theory_physics import THEORY as THEORY_PHYSICS
 from scripts.curriculum_topics import auto_topics, parse_ref
 from scripts import literature_math
 from scripts import problems_savchenko_baldin as savchenko_baldin
@@ -257,6 +259,7 @@ async def seed() -> None:
         # литература. Предмет в ключе обязателен — номера занятий у физики и математики свои.
         ref_to_lesson: dict[tuple[str, int, int], str] = {}
 
+        THEORY = {"physics": THEORY_PHYSICS}
         subjects = {course["subject"] for course in CURRICULUM}
         await session.execute(delete(CurriculumModule).where(CurriculumModule.subject.in_(subjects)))
         await session.flush()
@@ -273,6 +276,9 @@ async def seed() -> None:
                     lid = f"{mid}-{number:02d}"
                     for key in keys:
                         ref_to_lesson[key] = lid
+                    # Конспект ищем по первой ссылке на план: ключи в theory_*.py — занятия
+                    # плана, а не id подтем, чтобы перенумерация раскладки их не отвязывала.
+                    theory = THEORY.get(subject, {}).get(refs[0])
                     session.add(
                         CurriculumLesson(
                             id=lid,
@@ -282,8 +288,15 @@ async def seed() -> None:
                             description=first_description,
                             grades=",".join(str(g) for g in sorted({g for _, g, _ in keys})),
                             topic_id=next((plan[k][2] for k in keys if plan[k][2]), None),
+                            summary=theory["summary"] if theory else None,
+                            figure=theory.get("figure") if theory else None,
                         )
                     )
+                    if theory:
+                        for position, text in enumerate(theory["points"]):
+                            session.add(
+                                CurriculumLessonPoint(lesson_id=lid, position=position, text=text)
+                            )
 
         # Задачи из задачников к подтемам. Строки lesson_problems удалились каскадом вместе с
         # подтемами выше — вставляем заново.
@@ -426,6 +439,9 @@ async def seed() -> None:
         lessons_count = await session.scalar(select(func.count(CurriculumLesson.id)))
         problems_count = await session.scalar(select(func.count(LessonProblem.id)))
         references_count = await session.scalar(select(func.count(LessonReference.id)))
+        theory_count = await session.scalar(
+            select(func.count(CurriculumLesson.id)).where(CurriculumLesson.summary.isnot(None))
+        )
         bvi_count = await session.scalar(select(func.count(BviOlympiad.id)))
         bvi_cells = await session.scalar(select(func.count()).select_from(BviBenefit))
 
@@ -433,6 +449,7 @@ async def seed() -> None:
             f"Засеяно: {topics_count} тем, {tasks_count} задач, {olympiads_count} олимпиад, "
             f"{universities_count} вузов, {plans_count} тарифов, {lessons_count} подтем в программе, "
             f"{problems_count} задач к подтемам, {references_count} ссылок на литературу, "
+            f"{theory_count} конспектов подтем, "
             f"{bvi_count} олимпиад в БВИ-навигаторе ({bvi_cells} ячеек льгот)"
         )
 

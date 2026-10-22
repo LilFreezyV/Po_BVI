@@ -7,12 +7,14 @@ from sqlalchemy.orm import selectinload
 from app.crud import progress as progress_crud
 from app.models.content import (
     CurriculumLesson,
+    CurriculumLessonPoint,
     CurriculumModule,
     LessonProblem,
     Olympiad,
     Plan,
     ProblemSource,
     Section,
+    Task,
     Topic,
     TopicOlympiad,
     University,
@@ -25,6 +27,7 @@ from app.schemas.content import (
     CurriculumLessonOut,
     CurriculumModuleOut,
     LessonProblemOut,
+    LessonTheoryOut,
     LessonProblemsOut,
     LessonReferenceOut,
     LiteratureSourceOut,
@@ -233,7 +236,10 @@ async def list_curriculum(session: AsyncSession, subject: SubjectEnum) -> list[C
     stmt = (
         select(CurriculumModule)
         .where(CurriculumModule.subject == subject)
-        .options(selectinload(CurriculumModule.lessons).selectinload(CurriculumLesson.references))
+        .options(
+            selectinload(CurriculumModule.lessons).selectinload(CurriculumLesson.references),
+            selectinload(CurriculumModule.lessons).selectinload(CurriculumLesson.points),
+        )
         .order_by(CurriculumModule.position)
     )
     modules = (await session.execute(stmt)).scalars().all()
@@ -243,6 +249,13 @@ async def list_curriculum(session: AsyncSession, subject: SubjectEnum) -> list[C
             await session.execute(
                 select(LessonProblem.lesson_id, func.count(LessonProblem.id)).group_by(LessonProblem.lesson_id)
             )
+        ).all()
+    )
+
+    # Задачи каталога по темам: подтема показывает их количество и ведёт на страницу темы.
+    task_counts = dict(
+        (
+            await session.execute(select(Task.topic_id, func.count(Task.id)).group_by(Task.topic_id))
         ).all()
     )
 
@@ -260,6 +273,8 @@ async def list_curriculum(session: AsyncSession, subject: SubjectEnum) -> list[C
                 grades=grades_of(lesson.grades),
                 topic_id=lesson.topic_id,
                 problem_count=counts.get(lesson.id, 0),
+                has_theory=bool(lesson.summary),
+                task_count=task_counts.get(lesson.topic_id, 0) if lesson.topic_id else 0,
                 references=[
                     LessonReferenceOut(
                         source_id=ref.source_id,
@@ -348,4 +363,51 @@ async def get_lesson_problems(
             )
             for src in sources.values()
         ],
+    )
+
+
+async def get_lesson_theory(session: AsyncSession, lesson_id: str) -> LessonTheoryOut | None:
+    """Конспект подтемы вместе с соседями по теме — чтобы листать не возвращаясь в список."""
+    lesson = (
+        await session.execute(
+            select(CurriculumLesson)
+            .where(CurriculumLesson.id == lesson_id)
+            .options(selectinload(CurriculumLesson.points), selectinload(CurriculumLesson.module))
+        )
+    ).scalar_one_or_none()
+    if lesson is None:
+        return None
+
+    siblings = (
+        await session.scalars(
+            select(CurriculumLesson.id)
+            .where(CurriculumLesson.module_id == lesson.module_id)
+            .order_by(CurriculumLesson.number)
+        )
+    ).all()
+    index = siblings.index(lesson.id)
+
+    task_count = await session.scalar(
+        select(func.count(Task.id)).where(Task.topic_id == lesson.topic_id)
+    ) if lesson.topic_id else 0
+    problem_count = await session.scalar(
+        select(func.count(LessonProblem.id)).where(LessonProblem.lesson_id == lesson.id)
+    )
+
+    return LessonTheoryOut(
+        id=lesson.id,
+        title=lesson.title,
+        description=lesson.description,
+        grades=sorted(int(g) for g in lesson.grades.split(",") if g),
+        summary=lesson.summary,
+        points=[p.text for p in lesson.points],
+        figure=lesson.figure,
+        module_id=lesson.module.id,
+        module_title=lesson.module.title,
+        subject=getattr(lesson.module.subject, "value", lesson.module.subject),
+        topic_id=lesson.topic_id,
+        task_count=task_count or 0,
+        problem_count=problem_count or 0,
+        prev_id=siblings[index - 1] if index > 0 else None,
+        next_id=siblings[index + 1] if index + 1 < len(siblings) else None,
     )

@@ -143,13 +143,13 @@ const SUBJECTS = {
   physics: {
     title: 'Физика',
     intro:
-      'Весь курс одним списком, в порядке прохождения: крупная тема — подтемы внутри. В скобках классы, где тема встречается. Если по подтеме уже есть конспект и задачи трёх уровней, рядом будет ссылка на них.',
+      'Весь курс одним списком, в порядке прохождения: крупная тема — подтемы внутри. У подтемы собраны задачи: свои, трёх уровней, и задачи из сборников. Теория — в разделе «Темы».',
     placeholder: 'Поиск по подтемам: линзы, Кирхгоф…',
   },
   math: {
     title: 'Математика',
     intro:
-      'Черновик программы одним списком: к каждой подтеме — где читать теорию и какие задачи решать в классических задачниках. Ссылки открывают нужную страницу официального PDF.',
+      'Черновик программы одним списком: к каждой подтеме — какие задачи решать в классических задачниках. Ссылки открывают нужную страницу официального PDF.',
     placeholder: 'Поиск по подтемам: Виета, инверсия…',
   },
 }
@@ -340,6 +340,17 @@ function LessonRow({ lesson, topicTitle, sources, focused }) {
             ))}
           </ul>
         )}
+        <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-2">
+          {lesson.has_theory && (
+            <Link
+              to={`/theory/${lesson.id}`}
+              className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink-500 hover:text-pen-700"
+            >
+              <Icon name="book" className="h-3.5 w-3.5" />
+              Конспект
+            </Link>
+          )}
+        </div>
         {(lesson.problem_count > 0 || lesson.topic_id) && (
           <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-2">
             {lesson.problem_count > 0 && (
@@ -357,7 +368,7 @@ function LessonRow({ lesson, topicTitle, sources, focused }) {
                 to={`/topic/${lesson.topic_id}`}
                 className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-pen-700 hover:text-pen-900"
               >
-                Задачи по теме{topicTitle ? `: ${topicTitle}` : ''}
+                Задачи темы{lesson.task_count ? ` · ${lesson.task_count}` : ''}
                 <Icon name="arrow" className="h-3.5 w-3.5" />
               </Link>
             )}
@@ -490,7 +501,9 @@ export default function Program({ focusLesson = null }) {
       <div className="ruled-paper pointer-events-none absolute inset-x-0 top-0 h-56 -z-10" />
       <div className="max-w-3xl">
         <p className="eyebrow mb-3">Программа</p>
-        <h1 className="font-serif text-[32px] font-semibold leading-tight sm:text-[40px]">{meta.title}: программа</h1>
+        <h1 className="font-serif text-[32px] font-semibold leading-tight sm:text-[40px]">
+          {meta.title}: задачи по темам
+        </h1>
         <p className="mt-4 text-[17px] leading-relaxed text-ink-500">{meta.intro}</p>
       </div>
 

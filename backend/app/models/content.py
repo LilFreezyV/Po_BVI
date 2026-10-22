@@ -194,14 +194,35 @@ class CurriculumLesson(Base):
     topic_id: Mapped[str | None] = mapped_column(ForeignKey("topics.id", ondelete="SET NULL"), nullable=True)
     # Классы, в которых встречается подтема, через запятую: «9,11».
     grades: Mapped[str] = mapped_column(String(32), nullable=False, default="")
+    # Конспект подтемы: абзац объяснения и ключ анимации, которой он иллюстрируется.
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    figure: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     module: Mapped["CurriculumModule"] = relationship(back_populates="lessons")
     problems: Mapped[list["LessonProblem"]] = relationship(
         back_populates="lesson", order_by="LessonProblem.position", cascade="all, delete-orphan"
     )
+    points: Mapped[list["CurriculumLessonPoint"]] = relationship(
+        back_populates="lesson", order_by="CurriculumLessonPoint.position", cascade="all, delete-orphan"
+    )
     references: Mapped[list["LessonReference"]] = relationship(
         order_by="LessonReference.position", cascade="all, delete-orphan"
     )
+
+
+class CurriculumLessonPoint(Base):
+    """Тезис или формула в конспекте подтемы."""
+
+    __tablename__ = "curriculum_lesson_points"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    lesson_id: Mapped[str] = mapped_column(
+        ForeignKey("curriculum_lessons.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+
+    lesson: Mapped["CurriculumLesson"] = relationship(back_populates="points")
 
 
 class ProblemSource(Base):
