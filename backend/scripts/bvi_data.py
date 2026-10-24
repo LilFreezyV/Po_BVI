@@ -164,6 +164,7 @@ ARCHIVES = {
     "omfo": ("https://omfo.ru/", "Сайт олимпиады с заданиями"),
     "umov": ("https://umov.phys.msu.ru/#archive", "Задания прошлых лет"),
     "izumrud": ("https://dovuz.urfu.ru/olymps/izumrud/tasks", "Задания и решения прошлых лет"),
+    "vsosh": ("https://vserosolimp.edsoo.ru/zakluchit_way", "Задания заключительного этапа прошлых лет"),
     "spb-astro": ("http://school.astro.spbu.ru/index.php?n=Main.Zadachi", "Задачи олимпиады"),
     "buduschee-sibiri": ("https://olymp-sibir.nstu.ru/", "Задания — в разделе на главной"),
     "put-v-nauku": ("https://olymphysics.nsu.ru/", "Материалы и примеры заданий"),
@@ -172,6 +173,30 @@ ARCHIVES = {
 # Олимпиады в порядке сводной таблицы: уровень по перечню 2026/27, даты сезона
 # и ячейки «победитель / призёр» по каждому вузу-столбцу.
 OLYMPIADS = [
+    # ВсОШ не входит в перечень: её льготы — ч. 4 ст. 71 Закона об образовании (БВИ на 4
+    # года по профилю олимпиады; соответствие профиля направлению определяет вуз). Сроки этапов
+    # и порядок — https://vserosolimp.edsoo.ru/ (сверено 2026-10-24): муниципальный этап до
+    # 25 декабря, региональный до 1 марта; даты финала 2027 ещё не объявлены.
+    {
+        "id": "vsosh",
+        "title": "Всероссийская олимпиада школьников (ВсОШ)",
+        "level": "vsosh",
+        "organizer": "Минпросвещения России",
+        "grades": "7–11 класс",
+        "status": "впереди муниципальный этап",
+        "registration": "отдельной регистрации нет: школьный этап — через школу, дальше проходят по баллам",
+        "selection": "школьный этап — сентябрь–октябрь; муниципальный — до 25 декабря 2026; региональный — до 1 марта 2027 (даты назначает регион)",
+        "final": "март–апрель 2027, даты ещё не объявлены",
+        "site_url": "https://vserosolimp.edsoo.ru/",
+        "reg_url": None,
+        "chat_url": None,
+        "position": 0,
+        "benefits": {
+            uni: ["bvi", "bvi"]
+            for uni in ("mfti", "mgu", "baumanka", "mifi", "vshe-fizika", "vshe-miem",
+                        "spbgu", "itmo", "misis", "mei", "politeh")
+        },
+    },
     {
         "id": "inzhenernaya",
         "title": "Инженерная олимпиада школьников",
@@ -185,7 +210,6 @@ OLYMPIADS = [
         "site_url": "https://olymp.mephi.ru/engineering",
         "reg_url": "https://org.mephi.ru/",
         "chat_url": "https://t.me/olymp_mephi",
-        "catalog_id": None,
         "position": 1,
         "benefits": {
             "mfti": ["bvi_part", "score100"],
@@ -214,7 +238,6 @@ OLYMPIADS = [
         "site_url": "https://zv.susu.ru/",
         "reg_url": "https://zvportal.susu.ru/",
         "chat_url": None,
-        "catalog_id": None,
         "position": 2,
         "benefits": {
             "mfti": ["bvi_part", "none"],
@@ -243,7 +266,6 @@ OLYMPIADS = [
         "site_url": "https://mosphys.olimpiada.ru/",
         "reg_url": "https://mosphys.olimpiada.ru/",
         "chat_url": "https://t.me/mos_olymp",
-        "catalog_id": None,
         "position": 3,
         "benefits": {
             "mfti": ["bvi_part", "score100"],
@@ -272,7 +294,6 @@ OLYMPIADS = [
         "site_url": "https://olymp.msu.ru/",
         "reg_url": "https://olymp.msu.ru/rus/register/",
         "chat_url": "https://t.me/physics_msu_official",
-        "catalog_id": "lomonosov",
         "position": 4,
         "benefits": {
             "mfti": ["bvi_part", "score100"],
@@ -301,7 +322,6 @@ OLYMPIADS = [
         "site_url": "https://olymp.mephi.ru/rosatom",
         "reg_url": "https://org.mephi.ru/",
         "chat_url": "https://t.me/olymp_mephi",
-        "catalog_id": "rosatom",
         "position": 5,
         "benefits": {
             "mfti": ["bvi_part", "score100"],
@@ -330,7 +350,6 @@ OLYMPIADS = [
         "site_url": "https://olymp-online.mipt.ru/",
         "reg_url": "https://olymp-online.mipt.ru/",
         "chat_url": "https://t.me/Olymp_Phystech",
-        "catalog_id": "phystech",
         "position": 6,
         "benefits": {
             "mfti": ["bvi_part", "score100"],
@@ -359,7 +378,6 @@ OLYMPIADS = [
         "site_url": "https://pvg.mk.ru/",
         "reg_url": "https://pvg.mk.ru/",
         "chat_url": "https://t.me/physics_msu_official",
-        "catalog_id": None,
         "position": 7,
         "benefits": {
             "mfti": ["bvi_part", "score100"],
@@ -388,7 +406,6 @@ OLYMPIADS = [
         "site_url": "https://olimpiada.ru/activity/4",
         "reg_url": "https://olimpiada.ru/activity/4",
         "chat_url": "https://t.me/olimpiada_ru",
-        "catalog_id": None,
         "position": 8,
         "benefits": {
             "mfti": ["score100", "score100"],
@@ -417,7 +434,6 @@ OLYMPIADS = [
         "site_url": "https://sesc.nsu.ru/olymp-vsesib/stages/",
         "reg_url": "https://vsesib.nsu.ru/",
         "chat_url": "https://t.me/vsesib_olymp",
-        "catalog_id": None,
         "position": 9,
         "benefits": {
             "mfti": ["bvi_part", "score100"],
@@ -446,7 +462,6 @@ OLYMPIADS = [
         "site_url": "https://distolymp2.spbu.ru/olymp/",
         "reg_url": "https://distolymp.spbu.ru/phys/olymp/registration/user/",
         "chat_url": "https://vk.com/distolymp",
-        "catalog_id": None,
         "position": 10,
         "benefits": {
             "mfti": ["score100", "score100"],
@@ -475,7 +490,6 @@ OLYMPIADS = [
         "site_url": "https://ntcontest.ru/participants/schedule/",
         "reg_url": "https://my.ntcontest.ru/",
         "chat_url": "https://t.me/nto_olympiada",
-        "catalog_id": None,
         "position": 11,
         "benefits": {
             "mfti": ["score100", "score100"],
@@ -504,7 +518,6 @@ OLYMPIADS = [
         "site_url": "https://olimpiadakurchatov.ru/",
         "reg_url": "https://my.sirius.online/",
         "chat_url": "https://t.me/olymp_mephi",
-        "catalog_id": None,
         "position": 12,
         "benefits": {
             "mfti": ["bvi_part", "score100"],
@@ -533,7 +546,6 @@ OLYMPIADS = [
         "site_url": "https://olympiada.spbu.ru/",
         "reg_url": "https://olymp.spbu.ru/Account/LogOn",
         "chat_url": "https://max.ru/id7801002274_gos48",
-        "catalog_id": None,
         "position": 13,
         "benefits": {
             "mfti": ["bvi_part", "score100"],
@@ -562,7 +574,6 @@ OLYMPIADS = [
         "site_url": "https://olymp.bmstu.ru/",
         "reg_url": "https://lk-olymp.bmstu.ru/",
         "chat_url": "https://t.me/olymp_bmstu",
-        "catalog_id": None,
         "position": 14,
         "benefits": {
             "mfti": ["score100", "score100"],
@@ -591,7 +602,6 @@ OLYMPIADS = [
         "site_url": "https://malun.kpfu.ru/mpo",
         "reg_url": "https://malun.kpfu.ru/mpo",
         "chat_url": "https://t.me/+UTjq7UDk6SZiZWVi",
-        "catalog_id": None,
         "position": 15,
         "benefits": {
             "mfti": ["bvi_part", "score100"],
@@ -620,7 +630,6 @@ OLYMPIADS = [
         "site_url": "https://www.physolymp.spb.ru/",
         "reg_url": "https://www.physolymp.spb.ru/",
         "chat_url": None,
-        "catalog_id": None,
         "position": 16,
         "benefits": {
             "mfti": ["bvi_part", "score100"],
@@ -649,7 +658,6 @@ OLYMPIADS = [
         "site_url": "https://olymp-sibir.nstu.ru/",
         "reg_url": "https://ciu.nstu.ru/future_of_siberia/",
         "chat_url": "https://t.me/futuresiberia",
-        "catalog_id": None,
         "position": 17,
         "benefits": {
             "mfti": ["bvi_part", "none"],
@@ -678,7 +686,6 @@ OLYMPIADS = [
         "site_url": "http://www.unn.ru/bibn/",
         "reg_url": "http://www.unn.ru/bibn/reg/",
         "chat_url": "https://t.me/priem_unn",
-        "catalog_id": None,
         "position": 18,
         "benefits": {
             "mfti": ["score100", "score100"],
@@ -707,7 +714,6 @@ OLYMPIADS = [
         "site_url": "https://www.energy-hope.ru/",
         "reg_url": "https://www.energy-hope.ru/novice/reg_user.html",
         "chat_url": "https://t.me/energy_hope",
-        "catalog_id": None,
         "position": 19,
         "benefits": {
             "mfti": ["none", "none"],
@@ -736,7 +742,6 @@ OLYMPIADS = [
         "site_url": "https://olympiads.mccme.ru/omo/",
         "reg_url": "https://olympiads.mccme.ru/omo/",
         "chat_url": "https://t.me/physforeveryone",
-        "catalog_id": None,
         "position": 20,
         "benefits": {
             "mfti": ["bvi_part", "none"],
@@ -765,7 +770,6 @@ OLYMPIADS = [
         "site_url": "https://abiturient.tsu.ru/ru/content/ormo",
         "reg_url": "https://abiturient.tsu.ru/ru/content/ormo",
         "chat_url": "https://t.me/olymptsu",
-        "catalog_id": None,
         "position": 21,
         "benefits": {
             "mfti": ["score100", "score100"],
@@ -794,7 +798,6 @@ OLYMPIADS = [
         "site_url": "https://olympiad.gazprom.ru/",
         "reg_url": "https://olympiad.gazprom.ru/",
         "chat_url": "https://t.me/olymp_gazprom",
-        "catalog_id": None,
         "position": 22,
         "benefits": {
             "mfti": ["none", "none"],
@@ -823,7 +826,6 @@ OLYMPIADS = [
         "site_url": "https://dovuz.sfu.ru/abiturientu-sfu/olimpiady/belchonok/2026-2027-uchebnyy-god/",
         "reg_url": "https://dovuz.sfu.ru/abiturientu-sfu/olimpiady/belchonok/2026-2027-uchebnyy-god/",
         "chat_url": "https://t.me/dovuz_sfu",
-        "catalog_id": None,
         "position": 23,
         "benefits": {
             "mfti": ["none", "none"],
@@ -852,7 +854,6 @@ OLYMPIADS = [
         "site_url": "https://v-olymp.ru/volmp_physic/",
         "reg_url": "https://v-olymp.ru/volmp_physic/",
         "chat_url": "https://t.me/volymp",
-        "catalog_id": None,
         "position": 24,
         "benefits": {
             "mfti": ["score100", "score100"],
@@ -881,7 +882,6 @@ OLYMPIADS = [
         "site_url": "https://olymp.itmo.ru/",
         "reg_url": "https://olymp.itmo.ru/",
         "chat_url": "https://t.me/physics_olymp",
-        "catalog_id": None,
         "position": 25,
         "benefits": {
             "mfti": ["bvi_part", "none"],
@@ -910,7 +910,6 @@ OLYMPIADS = [
         "site_url": "https://school.astro.spbu.ru/",
         "reg_url": "https://school.astro.spbu.ru/",
         "chat_url": "https://vk.com/astroolympiads",
-        "catalog_id": None,
         "position": 26,
         "benefits": {
             "mfti": ["bvi_part", "score100"],
@@ -939,7 +938,6 @@ OLYMPIADS = [
         "site_url": "https://umov.phys.msu.ru/",
         "reg_url": "https://umov.phys.msu.ru/",
         "chat_url": "https://t.me/robofest_rsosh",
-        "catalog_id": None,
         "position": 27,
         "benefits": {
             "mfti": ["score100", "score100"],
@@ -968,7 +966,6 @@ OLYMPIADS = [
         "site_url": "https://olymphysics.nsu.ru/",
         "reg_url": "https://olympfiz.nsu.ru/login/signup.php",
         "chat_url": "https://vk.com/olimpfiz",
-        "catalog_id": None,
         "position": 28,
         "benefits": {
             "mfti": ["none", "none"],
@@ -997,7 +994,6 @@ OLYMPIADS = [
         "site_url": "https://dovuz.urfu.ru/olymps/izumrud",
         "reg_url": "https://dovuz.urfu.ru/olymps/izumrud/registration",
         "chat_url": "https://t.me/urfu_ru",
-        "catalog_id": None,
         "position": 29,
         "benefits": {
             "mfti": ["none", "none"],
@@ -1026,7 +1022,6 @@ OLYMPIADS = [
         "site_url": "https://formulo.org/ru/olymp/2026-phys-ru/",
         "reg_url": "https://is.formulo.org/",
         "chat_url": "https://t.me/formulo_olimp_phys",
-        "catalog_id": None,
         "position": 30,
         "benefits": {
             "mfti": ["unknown", "unknown"],

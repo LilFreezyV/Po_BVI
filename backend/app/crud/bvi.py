@@ -14,6 +14,7 @@ from app.schemas.bvi import (
     BviOut,
     BviSourceOut,
     BviUniversityOut,
+    OlympiadStageOut,
 )
 from app.bvi_meta import HIGHLIGHTS, LEGEND, SOURCES, UPDATED_ON
 
@@ -28,7 +29,7 @@ async def get_bvi(session: AsyncSession, today: date | None = None) -> BviOut:
     olympiads = (
         await session.scalars(
             select(BviOlympiad)
-            .options(selectinload(BviOlympiad.benefits))
+            .options(selectinload(BviOlympiad.benefits), selectinload(BviOlympiad.stages))
             .order_by(BviOlympiad.position)
         )
     ).all()
@@ -52,10 +53,14 @@ async def get_bvi(session: AsyncSession, today: date | None = None) -> BviOut:
                 grades=o.grades, status=o.status, registration=o.registration,
                 selection=o.selection, final=o.final, site_url=o.site_url,
                 reg_url=o.reg_url, chat_url=o.chat_url, archive_url=o.archive_url,
-                archive_note=o.archive_note, catalog_id=o.catalog_id,
+                archive_note=o.archive_note,
                 benefits=[
                     BviBenefitOut(university_id=b.university_id, winner=b.winner, prize=b.prize)
                     for b in o.benefits
+                ],
+                stages=[
+                    OlympiadStageOut(subject=s.subject.value, title=s.title, starts_at=s.starts_at, note=s.note)
+                    for s in o.stages
                 ],
             )
             for o in olympiads

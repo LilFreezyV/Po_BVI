@@ -76,40 +76,14 @@ class Task(Base):
     topic: Mapped["Topic"] = relationship(back_populates="tasks")
 
 
-class Olympiad(Base):
-    __tablename__ = "olympiads"
-
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    level: Mapped[str] = mapped_column(String(255), nullable=False)
-    organizer: Mapped[str] = mapped_column(String(255), nullable=False)
-    dates: Mapped[str] = mapped_column(String(255), nullable=False)
-    grades: Mapped[str] = mapped_column(String(64), nullable=False)
-    perk: Mapped[str] = mapped_column(Text, nullable=False)
-    note: Mapped[str] = mapped_column(Text, nullable=False)
-
-    subject_links: Mapped[list["OlympiadSubject"]] = relationship(
-        back_populates="olympiad", cascade="all, delete-orphan"
-    )
-    topic_links: Mapped[list["TopicOlympiad"]] = relationship(
-        back_populates="olympiad", cascade="all, delete-orphan"
-    )
-    university_links: Mapped[list["UniversityOlympiad"]] = relationship(
-        back_populates="olympiad", cascade="all, delete-orphan"
-    )
-    stages: Mapped[list["OlympiadStage"]] = relationship(
-        order_by="OlympiadStage.starts_at", cascade="all, delete-orphan"
-    )
-
-
 class OlympiadStage(Base):
-    """Тур или этап олимпиады по предмету с точной датой — для обратного отсчёта на сайте."""
+    """Тур или этап олимпиады навигатора по предмету с точной датой — для обратного отсчёта."""
 
     __tablename__ = "olympiad_stages"
 
     id: Mapped[str] = mapped_column(String(96), primary_key=True)
     olympiad_id: Mapped[str] = mapped_column(
-        ForeignKey("olympiads.id", ondelete="CASCADE"), nullable=False, index=True
+        ForeignKey("bvi_olympiads.id", ondelete="CASCADE"), nullable=False, index=True
     )
     subject: Mapped[SubjectEnum] = mapped_column(SubjectType, nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -117,49 +91,16 @@ class OlympiadStage(Base):
     note: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
 
-class OlympiadSubject(Base):
-    __tablename__ = "olympiad_subjects"
-
-    olympiad_id: Mapped[str] = mapped_column(ForeignKey("olympiads.id", ondelete="CASCADE"), primary_key=True)
-    subject: Mapped[SubjectEnum] = mapped_column(SubjectType, primary_key=True)
-
-    olympiad: Mapped["Olympiad"] = relationship(back_populates="subject_links")
-
-
 class TopicOlympiad(Base):
+    """Тема каталога ↔ олимпиада навигатора («Где встречается» на странице темы)."""
+
     __tablename__ = "topic_olympiads"
 
     topic_id: Mapped[str] = mapped_column(ForeignKey("topics.id", ondelete="CASCADE"), primary_key=True)
-    olympiad_id: Mapped[str] = mapped_column(ForeignKey("olympiads.id", ondelete="CASCADE"), primary_key=True)
+    olympiad_id: Mapped[str] = mapped_column(ForeignKey("bvi_olympiads.id", ondelete="CASCADE"), primary_key=True)
 
     topic: Mapped["Topic"] = relationship(back_populates="olympiad_links")
-    olympiad: Mapped["Olympiad"] = relationship(back_populates="topic_links")
-
-
-class University(Base):
-    __tablename__ = "universities"
-
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    short: Mapped[str] = mapped_column(String(32), nullable=False)
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    city: Mapped[str] = mapped_column(String(255), nullable=False)
-    programs: Mapped[str] = mapped_column(String(500), nullable=False)
-    confirm: Mapped[str] = mapped_column(String(255), nullable=False)
-    passing: Mapped[str] = mapped_column(String(255), nullable=False)
-
-    olympiad_links: Mapped[list["UniversityOlympiad"]] = relationship(
-        back_populates="university", cascade="all, delete-orphan"
-    )
-
-
-class UniversityOlympiad(Base):
-    __tablename__ = "university_olympiads"
-
-    university_id: Mapped[str] = mapped_column(ForeignKey("universities.id", ondelete="CASCADE"), primary_key=True)
-    olympiad_id: Mapped[str] = mapped_column(ForeignKey("olympiads.id", ondelete="CASCADE"), primary_key=True)
-
-    university: Mapped["University"] = relationship(back_populates="olympiad_links")
-    olympiad: Mapped["Olympiad"] = relationship(back_populates="university_links")
+    olympiad: Mapped["BviOlympiad"] = relationship()
 
 
 class CurriculumModule(Base):
@@ -316,10 +257,9 @@ class PlanFeature(Base):
 
 
 # ——— БВИ-навигатор ———
-# Отдельные таблицы, а не расширение olympiads/universities: в каталоге живут несколько
-# «витринных» олимпиад с маркетинговым описанием, а здесь — весь перечень по физике
-# (30 олимпиад × 11 вузов-столбцов) со ссылками на первоисточники. Связь с каталогом —
-# необязательная (BviOlympiad.catalog_id), чтобы можно было дойти до задач по теме.
+# Единственный источник про олимпиады и вузы: весь перечень по физике плюс ВсОШ
+# (олимпиады × 11 вузов-столбцов) со ссылками на первоисточники. Старые таблицы
+# olympiads/universities удалены в миграции 0011; темы каталога и даты туров ссылаются сюда.
 
 
 class BviUniversity(Base):
@@ -342,7 +282,8 @@ class BviOlympiad(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     position: Mapped[int] = mapped_column(Integer, nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
-    # Уровень по перечню: 'I' | 'II' | 'III' | 'off' (нет в перечне — льгот не даёт).
+    # Уровень по перечню: 'I' | 'II' | 'III' | 'off' (нет в перечне — льгот не даёт)
+    # или 'vsosh' — ВсОШ: не в перечне, льготы по отдельной статье закона.
     level: Mapped[str] = mapped_column(String(8), nullable=False)
     organizer: Mapped[str] = mapped_column(String(255), nullable=False)
     grades: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -356,12 +297,12 @@ class BviOlympiad(Base):
     # Раздел с заданиями прошлых лет на сайте олимпиады: адрес и как он там назван.
     archive_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     archive_note: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    catalog_id: Mapped[str | None] = mapped_column(
-        ForeignKey("olympiads.id", ondelete="SET NULL"), nullable=True
-    )
 
     benefits: Mapped[list["BviBenefit"]] = relationship(
         back_populates="olympiad", cascade="all, delete-orphan"
+    )
+    stages: Mapped[list["OlympiadStage"]] = relationship(
+        order_by="OlympiadStage.starts_at", cascade="all, delete-orphan"
     )
 
 

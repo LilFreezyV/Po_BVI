@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useAnimationFrame, useInView, useReducedMotion } from 'framer-motion'
 import { AUDIENCE } from '../data/site.js'
-import { listOlympiads, listPlans, listSections, listTopics, listUniversities } from '../lib/api.js'
+import { getBvi, listPlans, listSections, listTopics } from '../lib/api.js'
 import { useAsync } from '../lib/useAsync.js'
+import { LEVEL_LABEL } from '../lib/olympiadLevels.js'
 import { Icon, Link, navigate } from '../components/ui.jsx'
 import { CountUp, DrawnUnderline, EASE, Reveal, ScrollLine, Stagger, staggerItem, useParallax } from '../components/motion.jsx'
 
@@ -227,7 +228,7 @@ function Countdown({ olympiads }) {
       className="card w-full max-w-sm p-5"
     >
       <p className="eyebrow mb-3">ближайший этап</p>
-      <p className="font-serif text-[20px] font-semibold leading-tight">Олимпиада «{olympiad.title}»</p>
+      <p className="font-serif text-[20px] font-semibold leading-tight">{olympiad.title}</p>
       <ul className="mt-4 space-y-3">
         {rows.map(({ label, stage }) => {
           const days = daysUntil(now, stage.date)
@@ -313,7 +314,7 @@ function Hero({ stats, olympiads, loading }) {
           </motion.button>
           <motion.button
             className="btn-secondary"
-            onClick={() => navigate('/base')}
+            onClick={() => navigate('/bvi')}
             whileHover={{ x: 2 }}
             whileTap={{ scale: 0.98 }}
             transition={{ duration: 0.2 }}
@@ -521,7 +522,9 @@ function Audience() {
   )
 }
 
-/* ——— База: олимпиада → вуз ——— */
+/* ——— База: олимпиада → вуз (данные навигатора /api/bvi) ——— */
+
+const FEATURED_OLYMPIADS = ['fizteh', 'rosatom', 'lomonosov']
 
 function Bases({ olympiads, universities }) {
   return (
@@ -543,30 +546,39 @@ function Bases({ olympiads, universities }) {
         </div>
 
         <Stagger className="mt-10 grid gap-4 md:grid-cols-3" step={0.08}>
-          {olympiads.slice(0, 3).map((o) => (
-            <motion.article key={o.id} variants={staggerItem} whileHover={{ y: -4 }} className="card p-6">
-              <div className="flex items-start justify-between gap-3">
-                <h3 className="text-[18px] font-bold">{o.title}</h3>
-                <span className="chip bg-pen-50 text-pen-700">{o.level}</span>
-              </div>
-              <p className="mt-1.5 text-sm text-ink-400">{o.organizer}</p>
-              <p className="mt-4 text-[15px] leading-relaxed text-ink-700">{o.perk}</p>
-            </motion.article>
-          ))}
+          {FEATURED_OLYMPIADS.map((id) => olympiads.find((o) => o.id === id))
+            .filter(Boolean)
+            .map((o) => {
+              const bvi = o.benefits.filter((b) => b.winner === 'bvi' || b.winner === 'bvi_part').length
+              return (
+                <motion.article key={o.id} variants={staggerItem} whileHover={{ y: -4 }} className="card">
+                  <Link to={`/bvi#oly-${o.id}`} className="block p-6">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="text-[18px] font-bold leading-snug">{o.title}</h3>
+                      <span className="chip shrink-0 bg-pen-50 text-pen-700">{LEVEL_LABEL[o.level]}</span>
+                    </div>
+                    <p className="mt-1.5 text-sm text-ink-400">{o.organizer}</p>
+                    <p className="mt-4 text-[15px] leading-relaxed text-ink-700">
+                      Победителю дают БВИ в{' '}
+                      <span className="font-mono font-semibold text-pen-700">{bvi}</span> из{' '}
+                      <span className="font-mono">{universities.length}</span> вузов таблицы
+                    </p>
+                    <p className="mt-2 text-[13px] text-ink-400">Сейчас: {o.status}</p>
+                  </Link>
+                </motion.article>
+              )
+            })}
         </Stagger>
 
         <Stagger className="mt-4 grid gap-4 md:grid-cols-3" step={0.08}>
           {universities.slice(0, 3).map((u) => (
             <motion.article key={u.id} variants={staggerItem} className="card flex items-start gap-4 p-6">
-              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-pen-700 font-mono text-[13px] font-bold text-white">
+              <span className="grid h-12 min-w-12 shrink-0 place-items-center rounded-lg bg-pen-700 px-2 font-mono text-[13px] font-bold text-white">
                 {u.short}
               </span>
               <div className="min-w-0">
                 <h3 className="text-[16px] font-bold leading-snug">{u.title}</h3>
-                <p className="mt-1 text-sm text-ink-400">{u.city}</p>
-                <p className="mt-3 text-[14px] leading-relaxed text-ink-500">
-                  Принимает: {u.accepts.map((a) => a.title).join(' · ')}
-                </p>
+                <p className="mt-3 text-[14px] leading-relaxed text-ink-500">Победителю: {u.winner}</p>
               </div>
             </motion.article>
           ))}
@@ -729,13 +741,14 @@ function FinalCta({ sections }) {
 
 export default function Landing() {
   const { data, loading } = useAsync(
-    () => Promise.all([listTopics(), listOlympiads(), listUniversities(), listPlans(), listSections()]),
+    () => Promise.all([listTopics(), getBvi(), listPlans(), listSections()]),
     []
   )
-  const [topics, olympiads, universities, plans, sections] = data || [[], [], [], [], []]
+  const [topics, bvi, plans, sections] = data || [[], { olympiads: [], universities: [] }, [], []]
+  const { olympiads, universities } = bvi
 
   const stats = [
-    { value: olympiads.length, label: 'перечневых олимпиад в базе' },
+    { value: olympiads.length, label: 'олимпиад в базе' },
     { value: topics.length, label: 'тем по физике и математике' },
     { value: topics.length * 6, label: 'задач трёх уровней сложности' },
     { value: universities.length, label: 'вузов с разбором льгот' },

@@ -46,6 +46,8 @@ class TheoryOut(BaseModel):
 
 
 class OlympiadSummaryOut(BaseModel):
+    """Олимпиада навигатора, кратко. level — код: 'I' | 'II' | 'III' | 'off' | 'vsosh'."""
+
     id: str
     title: str
     organizer: str
@@ -68,37 +70,6 @@ class TopicDetailOut(BaseModel):
     progress: TopicProgressOut
     prev_topic_id: str | None
     next_topic_id: str | None
-
-
-class OlympiadStageOut(BaseModel):
-    subject: str
-    title: str
-    starts_at: datetime
-    note: str | None
-
-
-class OlympiadOut(BaseModel):
-    id: str
-    title: str
-    subjects: list[str]
-    level: str
-    organizer: str
-    dates: str
-    grades: str
-    perk: str
-    note: str
-    stages: list[OlympiadStageOut] = []
-
-
-class UniversityOut(BaseModel):
-    id: str
-    short: str
-    title: str
-    city: str
-    programs: str
-    accepts: list[OlympiadSummaryOut]
-    confirm: str
-    passing: str
 
 
 class PlanOut(BaseModel):

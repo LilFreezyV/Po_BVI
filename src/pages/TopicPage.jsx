@@ -5,6 +5,7 @@ import { getTopic as fetchTopic, setTaskStatus } from '../lib/api.js'
 import AttemptButtons, { ATTEMPT_CARD } from '../components/AttemptButtons.jsx'
 import { useAsync } from '../lib/useAsync.js'
 import { useAuth } from '../lib/auth.jsx'
+import { LEVEL_LABEL } from '../lib/olympiadLevels.js'
 import { Chip, Icon, Link, ProgressBar, Skeleton, SkeletonLines, navigate } from '../components/ui.jsx'
 
 function TaskCard({ task, index, status, onStatus }) {
@@ -297,20 +298,22 @@ export default function TopicPage({ topicId }) {
             <p className="text-[15px] font-bold">Где встречается</p>
             <ul className="mt-4 space-y-3">
               {topic.olympiads.map((o) => (
-                <li key={o.id} className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[15px] font-semibold">{o.title}</p>
-                    <p className="text-[13px] text-ink-400">{o.organizer}</p>
-                  </div>
-                  <Chip className="shrink-0 bg-paper text-[11px] text-ink-500">{o.level}</Chip>
+                <li key={o.id}>
+                  <Link to={`/bvi#oly-${o.id}`} className="flex items-start justify-between gap-3 hover:text-pen-800">
+                    <div>
+                      <p className="text-[15px] font-semibold">{o.title}</p>
+                      <p className="text-[13px] text-ink-400">{o.organizer}</p>
+                    </div>
+                    <Chip className="shrink-0 bg-paper text-[11px] text-ink-500">{LEVEL_LABEL[o.level] || o.level}</Chip>
+                  </Link>
                 </li>
               ))}
             </ul>
             <Link
-              to="/base"
+              to="/bvi"
               className="mt-4 inline-flex items-center gap-2 text-[14px] font-semibold text-pen-700 hover:text-pen-900"
             >
-              База олимпиад и вузов
+              Какая олимпиада даёт БВИ
               <Icon name="arrow" className="h-4 w-4" />
             </Link>
           </div>

@@ -23,9 +23,7 @@ from app.models.content import (
     CurriculumModule,
     LessonProblem,
     LessonReference,
-    Olympiad,
     OlympiadStage,
-    OlympiadSubject,
     Plan,
     PlanFeature,
     ProblemSource,
@@ -34,8 +32,6 @@ from app.models.content import (
     TheoryPoint,
     Topic,
     TopicOlympiad,
-    University,
-    UniversityOlympiad,
 )
 from scripts.bvi_data import ARCHIVES as BVI_ARCHIVES
 from scripts.bvi_data import DATES as BVI_DATES
@@ -48,15 +44,7 @@ from scripts.theory_physics import THEORY as THEORY_PHYSICS
 from scripts.curriculum_topics import auto_topics, parse_ref
 from scripts import literature_math
 from scripts import problems_savchenko_baldin as savchenko_baldin
-from scripts.seed_data import (
-    OLYMPIAD_STAGES,
-    OLYMPIAD_TITLE_TO_ID,
-    OLYMPIADS,
-    PLANS,
-    SECTIONS,
-    TOPICS,
-    UNIVERSITIES,
-)
+from scripts.seed_data import OLYMPIAD_STAGES, PLANS, SECTIONS, TOPICS
 
 
 # Задачники со свободной лицензией: модуль с SOURCE и PROBLEMS, тексты задач копируются.
@@ -76,9 +64,14 @@ def _assert_data_integrity() -> None:
     assert len(TOPICS) == 25, f"Ожидалось 25 тем, получено {len(TOPICS)}"
     total_tasks = sum(len(t["tasks"][level]) for t in TOPICS for level in ("easy", "medium", "hard"))
     assert total_tasks == 150, f"Ожидалось 150 задач, получено {total_tasks}"
-    assert len(OLYMPIADS) == 5, f"Ожидалось 5 олимпиад, получено {len(OLYMPIADS)}"
-    assert len(UNIVERSITIES) == 6, f"Ожидалось 6 вузов, получено {len(UNIVERSITIES)}"
     assert len(PLANS) == 2, f"Ожидалось 2 тарифа, получено {len(PLANS)}"
+
+    # Темы каталога и даты туров ссылаются на олимпиады навигатора.
+    bvi_ids = {o["id"] for o in BVI_OLYMPIADS}
+    for t in TOPICS:
+        unknown = set(t["olympiad_ids"]) - bvi_ids
+        assert not unknown, f"тема {t['id']}: нет олимпиад {sorted(unknown)} в bvi_data.OLYMPIADS"
+    assert set(OLYMPIAD_STAGES) <= bvi_ids, f"даты туров: нет олимпиад {sorted(set(OLYMPIAD_STAGES) - bvi_ids)}"
 
     topic_ids = {t["id"] for t in TOPICS}
     for course in CURRICULUM:
@@ -134,40 +127,6 @@ async def seed() -> None:
         for row in SECTIONS:
             await session.merge(Section(id=row["id"], subject=row["subject"], title=row["title"], hint=row["hint"]))
 
-        for row in OLYMPIADS:
-            await session.merge(
-                Olympiad(
-                    id=row["id"],
-                    title=row["title"],
-                    level=row["level"],
-                    organizer=row["organizer"],
-                    dates=row["dates"],
-                    grades=row["grades"],
-                    perk=row["perk"],
-                    note=row["note"],
-                )
-            )
-        await session.flush()
-
-        for row in OLYMPIADS:
-            await session.execute(delete(OlympiadSubject).where(OlympiadSubject.olympiad_id == row["id"]))
-            for subject in row["subjects"]:
-                session.add(OlympiadSubject(olympiad_id=row["id"], subject=subject))
-
-            await session.execute(delete(OlympiadStage).where(OlympiadStage.olympiad_id == row["id"]))
-            for position, (subject, title, starts_at, note) in enumerate(OLYMPIAD_STAGES.get(row["id"], [])):
-                session.add(
-                    OlympiadStage(
-                        id=f"{row['id']}-{subject}-{position}",
-                        olympiad_id=row["id"],
-                        subject=subject,
-                        title=title,
-                        starts_at=datetime.fromisoformat(starts_at),
-                        note=note,
-                    )
-                )
-        await session.flush()
-
         for row in TOPICS:
             await session.merge(
                 Topic(
@@ -189,10 +148,6 @@ async def seed() -> None:
             for position, text in enumerate(row["theory_points"]):
                 session.add(TheoryPoint(topic_id=topic_id, position=position, text=text))
 
-            await session.execute(delete(TopicOlympiad).where(TopicOlympiad.topic_id == topic_id))
-            for olympiad_id in row["olympiad_ids"]:
-                session.add(TopicOlympiad(topic_id=topic_id, olympiad_id=olympiad_id))
-
             for level in ("easy", "medium", "hard"):
                 for position, (task_id, text, source) in enumerate(row["tasks"][level]):
                     await session.merge(
@@ -205,26 +160,6 @@ async def seed() -> None:
                             source=source,
                         )
                     )
-
-        for row in UNIVERSITIES:
-            await session.merge(
-                University(
-                    id=row["id"],
-                    short=row["short"],
-                    title=row["title"],
-                    city=row["city"],
-                    programs=row["programs"],
-                    confirm=row["confirm"],
-                    passing=row["passing"],
-                )
-            )
-        await session.flush()
-
-        for row in UNIVERSITIES:
-            await session.execute(delete(UniversityOlympiad).where(UniversityOlympiad.university_id == row["id"]))
-            for olympiad_title in row["accepts"]:
-                olympiad_id = OLYMPIAD_TITLE_TO_ID[olympiad_title]
-                session.add(UniversityOlympiad(university_id=row["id"], olympiad_id=olympiad_id))
 
         for row in PLANS:
             await session.merge(
@@ -429,13 +364,34 @@ async def seed() -> None:
                     note=item["note"],
                 )
             )
+        await session.flush()
+
+        # Связи тем с олимпиадами и даты туров — после навигатора: удаление bvi_olympiads
+        # выше каскадом стирает и то и другое.
+        await session.execute(delete(TopicOlympiad))
+        for row in TOPICS:
+            for olympiad_id in row["olympiad_ids"]:
+                session.add(TopicOlympiad(topic_id=row["id"], olympiad_id=olympiad_id))
+        await session.execute(delete(OlympiadStage))
+        for olympiad_id, stages in OLYMPIAD_STAGES.items():
+            for position, (subject, title, starts_at, note) in enumerate(stages):
+                session.add(
+                    OlympiadStage(
+                        id=f"{olympiad_id}-{subject}-{position}",
+                        olympiad_id=olympiad_id,
+                        subject=subject,
+                        title=title,
+                        starts_at=datetime.fromisoformat(starts_at),
+                        note=note,
+                    )
+                )
 
         await session.commit()
 
         topics_count = await session.scalar(select(func.count(Topic.id)))
         tasks_count = await session.scalar(select(func.count(Task.id)))
-        olympiads_count = await session.scalar(select(func.count(Olympiad.id)))
-        universities_count = await session.scalar(select(func.count(University.id)))
+        stages_count = await session.scalar(select(func.count(OlympiadStage.id)))
+        topic_links = await session.scalar(select(func.count()).select_from(TopicOlympiad))
         plans_count = await session.scalar(select(func.count(Plan.id)))
         lessons_count = await session.scalar(select(func.count(CurriculumLesson.id)))
         problems_count = await session.scalar(select(func.count(LessonProblem.id)))
@@ -447,8 +403,8 @@ async def seed() -> None:
         bvi_cells = await session.scalar(select(func.count()).select_from(BviBenefit))
 
         print(
-            f"Засеяно: {topics_count} тем, {tasks_count} задач, {olympiads_count} олимпиад, "
-            f"{universities_count} вузов, {plans_count} тарифов, {lessons_count} подтем в программе, "
+            f"Засеяно: {topics_count} тем, {tasks_count} задач, {topic_links} связей тем с олимпиадами, "
+            f"{stages_count} дат туров, {plans_count} тарифов, {lessons_count} подтем в программе, "
             f"{problems_count} задач к подтемам, {references_count} ссылок на литературу, "
             f"{theory_count} конспектов подтем, "
             f"{bvi_count} олимпиад в БВИ-навигаторе ({bvi_cells} ячеек льгот)"

@@ -350,7 +350,7 @@ function CabinetContent({ user }) {
               Для БВИ в {user.goal || 'выбранный вуз'} нужен диплом призёра Физтеха или Росатома по физике и
               подтверждение ЕГЭ от 75 баллов.
             </p>
-            <button className="btn-secondary mt-4 w-full" onClick={() => navigate('/base')}>
+            <button className="btn-secondary mt-4 w-full" onClick={() => navigate('/bvi')}>
               Проверить условия вуза
             </button>
           </div>

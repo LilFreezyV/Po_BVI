@@ -9,9 +9,7 @@ from app.models.content import (
     CurriculumModule,
     LessonProblem,
     LessonReference,
-    Olympiad,
     OlympiadStage,
-    OlympiadSubject,
     Plan,
     PlanFeature,
     ProblemSource,
@@ -20,8 +18,6 @@ from app.models.content import (
     TheoryPoint,
     Topic,
     TopicOlympiad,
-    University,
-    UniversityOlympiad,
 )
 from app.models.progress import ProblemAttempt, TaskAttempt
 from app.models.user import User
@@ -32,12 +28,8 @@ __all__ = [
     "Topic",
     "TheoryPoint",
     "Task",
-    "Olympiad",
-    "OlympiadSubject",
     "OlympiadStage",
     "TopicOlympiad",
-    "University",
-    "UniversityOlympiad",
     "Plan",
     "PlanFeature",
     "CurriculumModule",

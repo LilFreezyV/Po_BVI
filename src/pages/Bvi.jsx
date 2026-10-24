@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { getBvi } from '../lib/api.js'
 import { useAsync } from '../lib/useAsync.js'
+import { LEVEL_LABEL } from '../lib/olympiadLevels.js'
 import { Chip, Icon, PageHeader, SkeletonCards, SkeletonLines } from '../components/ui.jsx'
 import { EASE, Reveal, Stagger, staggerItem } from '../components/motion.jsx'
 
@@ -11,6 +12,7 @@ import { EASE, Reveal, Stagger, staggerItem } from '../components/motion.jsx'
 
 const LEVEL_FILTERS = [
   { id: 'all', label: 'Все' },
+  { id: 'vsosh', label: 'ВсОШ' },
   { id: 'I', label: 'I уровень' },
   { id: 'II', label: 'II уровень' },
   { id: 'III', label: 'III уровень' },
@@ -27,13 +29,13 @@ const CELL = {
 }
 
 const LEVEL_CHIP = {
+  vsosh: 'bg-mark-500 text-white',
   I: 'bg-pen-700 text-white',
   II: 'bg-pen-100 text-pen-700',
   III: 'border border-line bg-paper text-ink-500',
   off: 'border border-dashed border-line text-ink-400',
 }
 
-const LEVEL_LABEL = { I: 'I уровень', II: 'II уровень', III: 'III уровень', off: 'вне перечня' }
 
 function Cell({ code }) {
   const meta = CELL[code] || CELL.unknown
@@ -329,7 +331,8 @@ export default function Bvi() {
   const reduce = useReducedMotion()
   const headRef = useRef(null)
 
-  const inList = data ? data.olympiads.filter((o) => o.level !== 'off').length : 0
+  // «В перечне» — только I–III уровни: ВсОШ и олимпиады вне перечня сюда не входят.
+  const inList = data ? data.olympiads.filter((o) => ['I', 'II', 'III'].includes(o.level)).length : 0
 
   return (
     <div className="container-x py-10 lg:py-14">

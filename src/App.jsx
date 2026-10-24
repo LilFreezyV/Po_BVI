@@ -5,13 +5,19 @@ import Landing from './pages/Landing.jsx'
 import Catalog from './pages/Catalog.jsx'
 import TopicPage from './pages/TopicPage.jsx'
 import ProgressPage from './pages/Progress.jsx'
-import Base from './pages/Base.jsx'
 import Bvi from './pages/Bvi.jsx'
 import Archive from './pages/Archive.jsx'
 import Theory from './pages/Theory.jsx'
 import Tiktok from './pages/Tiktok.jsx'
 import Login from './pages/Login.jsx'
 import Program from './pages/Program.jsx'
+
+function Redirect({ to }) {
+  useEffect(() => {
+    window.location.replace(`#${to}`)
+  }, [to])
+  return null
+}
 
 function readHash() {
   const raw = window.location.hash.replace(/^#/, '') || '/'
@@ -52,7 +58,8 @@ export default function App() {
   } else if (path === '/progress') {
     page = <ProgressPage />
   } else if (path === '/base') {
-    page = <Base />
+    // Старая «База олимпиад и вузов» заменена навигатором — старые ссылки ведут туда.
+    page = <Redirect to="/bvi" />
   } else if (path === '/bvi') {
     page = <Bvi />
   } else if (path === '/archive') {
