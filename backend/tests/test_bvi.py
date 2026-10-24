@@ -34,10 +34,28 @@ async def test_bvi_levels_and_links(client):
     response = await client.get("/api/bvi")
     olympiads = response.json()["olympiads"]
 
-    assert all(o["level"] in {"I", "II", "III", "off"} for o in olympiads)
+    assert all(o["level"] in {"I", "II", "III", "off", "vsosh"} for o in olympiads)
     # Вне перечня — отдельная категория: такие дипломы льгот не дают, но мы их показываем.
     assert any(o["level"] == "off" for o in olympiads)
+    # ВсОШ — своя метка, не «вне перечня»: льготы у неё по отдельной статье закона.
+    assert [o["id"] for o in olympiads if o["level"] == "vsosh"] == ["vsosh"]
     assert all(o["site_url"] for o in olympiads)
+
+
+@pytest.mark.asyncio
+async def test_old_olympiad_api_is_gone_and_data_moved(client):
+    """С 0011 олимпиады и вузы живут только в навигаторе."""
+    assert (await client.get("/api/olympiads")).status_code == 404
+    assert (await client.get("/api/universities")).status_code == 404
+
+    olympiads = {o["id"]: o for o in (await client.get("/api/bvi")).json()["olympiads"]}
+    # Даты туров для обратного отсчёта на главной — у «Физтеха» навигатора.
+    assert {s["subject"] for s in olympiads["fizteh"]["stages"]} == {"physics", "math"}
+
+    # «Где встречается» на странице темы — олимпиады навигатора.
+    topic = (await client.get("/api/topics/kinematics")).json()
+    assert topic["olympiads"]
+    assert {o["id"] for o in topic["olympiads"]} <= set(olympiads)
 
 
 @pytest.mark.asyncio

@@ -10,15 +10,12 @@ from app.models.content import (
     CurriculumLessonPoint,
     CurriculumModule,
     LessonProblem,
-    Olympiad,
     Plan,
     ProblemSource,
     Section,
     Task,
     Topic,
     TopicOlympiad,
-    University,
-    UniversityOlympiad,
 )
 from app.models.enums import LevelEnum, SubjectEnum
 from app.models.user import User
@@ -31,8 +28,6 @@ from app.schemas.content import (
     LessonProblemsOut,
     LessonReferenceOut,
     LiteratureSourceOut,
-    OlympiadOut,
-    OlympiadStageOut,
     OlympiadSummaryOut,
     PlanOut,
     ProblemSourceOut,
@@ -41,7 +36,6 @@ from app.schemas.content import (
     TheoryOut,
     TopicDetailOut,
     TopicListItemOut,
-    UniversityOut,
 )
 
 
@@ -152,66 +146,12 @@ async def get_topic_detail(
             OlympiadSummaryOut(
                 id=link.olympiad.id, title=link.olympiad.title, organizer=link.olympiad.organizer, level=link.olympiad.level
             )
-            for link in topic.olympiad_links
+            for link in sorted(topic.olympiad_links, key=lambda link: link.olympiad.position)
         ],
         progress=progress,
         prev_topic_id=prev_id,
         next_topic_id=next_id,
     )
-
-
-async def list_olympiads(session: AsyncSession) -> list[OlympiadOut]:
-    stmt = (
-        select(Olympiad)
-        .options(selectinload(Olympiad.subject_links), selectinload(Olympiad.stages))
-        .order_by(Olympiad.id)
-    )
-    olympiads = (await session.execute(stmt)).scalars().all()
-    return [
-        OlympiadOut(
-            id=o.id,
-            title=o.title,
-            subjects=[link.subject.value for link in o.subject_links],
-            level=o.level,
-            organizer=o.organizer,
-            dates=o.dates,
-            grades=o.grades,
-            perk=o.perk,
-            note=o.note,
-            stages=[
-                OlympiadStageOut(subject=s.subject.value, title=s.title, starts_at=s.starts_at, note=s.note)
-                for s in o.stages
-            ],
-        )
-        for o in olympiads
-    ]
-
-
-async def list_universities(session: AsyncSession) -> list[UniversityOut]:
-    stmt = (
-        select(University)
-        .options(selectinload(University.olympiad_links).selectinload(UniversityOlympiad.olympiad))
-        .order_by(University.id)
-    )
-    universities = (await session.execute(stmt)).scalars().all()
-    return [
-        UniversityOut(
-            id=u.id,
-            short=u.short,
-            title=u.title,
-            city=u.city,
-            programs=u.programs,
-            accepts=[
-                OlympiadSummaryOut(
-                    id=link.olympiad.id, title=link.olympiad.title, organizer=link.olympiad.organizer, level=link.olympiad.level
-                )
-                for link in u.olympiad_links
-            ],
-            confirm=u.confirm,
-            passing=u.passing,
-        )
-        for u in universities
-    ]
 
 
 async def list_plans(session: AsyncSession) -> list[PlanOut]:

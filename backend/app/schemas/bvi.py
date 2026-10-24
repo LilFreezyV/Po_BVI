@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 from pydantic import BaseModel
 
@@ -40,6 +40,15 @@ class BviBenefitOut(BaseModel):
     prize: str
 
 
+class OlympiadStageOut(BaseModel):
+    """Тур с точной датой — для обратного отсчёта на главной."""
+
+    subject: str
+    title: str
+    starts_at: datetime
+    note: str | None
+
+
 class BviOlympiadOut(BaseModel):
     id: str
     title: str
@@ -55,8 +64,8 @@ class BviOlympiadOut(BaseModel):
     chat_url: str | None
     archive_url: str | None
     archive_note: str | None
-    catalog_id: str | None
     benefits: list[BviBenefitOut]
+    stages: list[OlympiadStageOut] = []
 
 
 class BviDateOut(BaseModel):
