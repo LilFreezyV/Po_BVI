@@ -7,15 +7,14 @@
 Запуск: python -m scripts.seed
 """
 import asyncio
-from datetime import datetime
 from pathlib import Path
 
 from sqlalchemy import delete, func, select
 
 from app.database import async_session_factory
+from app.olympiad_dates import parse_point
 from app.models.content import (
     BviBenefit,
-    BviDate,
     BviOlympiad,
     BviUniversity,
     CurriculumLesson,
@@ -34,7 +33,6 @@ from app.models.content import (
     TopicOlympiad,
 )
 from scripts.bvi_data import ARCHIVES as BVI_ARCHIVES
-from scripts.bvi_data import DATES as BVI_DATES
 from scripts.bvi_data import OLYMPIADS as BVI_OLYMPIADS
 from scripts.bvi_data import UNIVERSITIES as BVI_UNIVERSITIES
 from scripts.curriculum_data import CURRICULUM
@@ -44,7 +42,7 @@ from scripts.theory_physics import THEORY as THEORY_PHYSICS
 from scripts.curriculum_topics import auto_topics, parse_ref
 from scripts import literature_math
 from scripts import problems_savchenko_baldin as savchenko_baldin
-from scripts.seed_data import OLYMPIAD_STAGES, PLANS, SECTIONS, TOPICS
+from scripts.seed_data import PLANS, SECTIONS, TOPICS
 
 
 # Задачники со свободной лицензией: модуль с SOURCE и PROBLEMS, тексты задач копируются.
@@ -71,7 +69,16 @@ def _assert_data_integrity() -> None:
     for t in TOPICS:
         unknown = set(t["olympiad_ids"]) - bvi_ids
         assert not unknown, f"тема {t['id']}: нет олимпиад {sorted(unknown)} в bvi_data.OLYMPIADS"
-    assert set(OLYMPIAD_STAGES) <= bvi_ids, f"даты туров: нет олимпиад {sorted(set(OLYMPIAD_STAGES) - bvi_ids)}"
+
+    # Этапы сезона: даты разбираются, конец не раньше начала, у каждой олимпиады есть финал.
+    for o in BVI_OLYMPIADS:
+        kinds = {st["kind"] for st in o["stages"]}
+        assert "final" in kinds, f"{o['id']}: нет этапа «финал»"
+        for st in o["stages"]:
+            start, _ = parse_point(st["start"])
+            end, _ = parse_point(st["end"], end=True)
+            assert start is None or end is None or start <= end, f"{o['id']}: конец этапа раньше начала {st}"
+            assert st["time"] is None or (len(st["time"]) == 5 and st["time"][2] == ":"), f"{o['id']}: время {st}"
 
     topic_ids = {t["id"] for t in TOPICS}
     for course in CURRICULUM:
@@ -321,7 +328,6 @@ async def seed() -> None:
         # Пересобираем целиком: строк немного, а льготы вузов меняются каждый сезон,
         # и при merge «по PK» удалённые олимпиады оставались бы в таблице.
         await session.execute(delete(BviBenefit))
-        await session.execute(delete(BviDate))
         await session.execute(delete(BviOlympiad))
         await session.execute(delete(BviUniversity))
         await session.flush()
@@ -331,11 +337,13 @@ async def seed() -> None:
             session.add(BviUniversity(position=position, **uni))
         assert set(BVI_ARCHIVES) <= {o["id"] for o in BVI_OLYMPIADS}, "архив ссылается на неизвестную олимпиаду"
         for olympiad in BVI_OLYMPIADS:
-            data = {k: v for k, v in olympiad.items() if k != "benefits"}
+            data = {k: v for k, v in olympiad.items() if k not in {"benefits", "stages", "short", "dates_url"}}
             archive = BVI_ARCHIVES.get(olympiad["id"])
             session.add(
                 BviOlympiad(
                     **data,
+                    short_title=olympiad["short"],
+                    dates_url=olympiad.get("dates_url") or olympiad["site_url"],
                     archive_url=archive[0] if archive else None,
                     archive_note=archive[1] if archive else None,
                 )
@@ -353,36 +361,35 @@ async def seed() -> None:
                         prize=prize,
                     )
                 )
-        for position, item in enumerate(BVI_DATES, start=1):
-            ends = item["ends_on"]
-            session.add(
-                BviDate(
-                    position=position,
-                    label=item["label"],
-                    ends_on=datetime.strptime(ends, "%Y-%m-%d").date() if ends else None,
-                    olympiad=item["olympiad"],
-                    note=item["note"],
-                )
-            )
         await session.flush()
 
-        # Связи тем с олимпиадами и даты туров — после навигатора: удаление bvi_olympiads
+        # Связи тем с олимпиадами и этапы сезона — после навигатора: удаление bvi_olympiads
         # выше каскадом стирает и то и другое.
         await session.execute(delete(TopicOlympiad))
         for row in TOPICS:
             for olympiad_id in row["olympiad_ids"]:
                 session.add(TopicOlympiad(topic_id=row["id"], olympiad_id=olympiad_id))
         await session.execute(delete(OlympiadStage))
-        for olympiad_id, stages in OLYMPIAD_STAGES.items():
-            for position, (subject, title, starts_at, note) in enumerate(stages):
+        for olympiad in BVI_OLYMPIADS:
+            for position, st in enumerate(olympiad["stages"]):
+                starts_on, start_precision = parse_point(st["start"])
+                ends_on, end_precision = parse_point(st["end"], end=True)
                 session.add(
                     OlympiadStage(
-                        id=f"{olympiad_id}-{subject}-{position}",
-                        olympiad_id=olympiad_id,
-                        subject=subject,
-                        title=title,
-                        starts_at=datetime.fromisoformat(starts_at),
-                        note=note,
+                        id=f"{olympiad['id']}-{position}",
+                        olympiad_id=olympiad["id"],
+                        position=position,
+                        kind=st["kind"],
+                        subject=st["subject"],
+                        title=st["title"],
+                        starts_on=starts_on,
+                        start_precision=start_precision,
+                        ends_on=ends_on,
+                        end_precision=end_precision,
+                        approximate=st["approx"],
+                        settled=st["settled"],
+                        time_msk=st["time"],
+                        note=st["note"],
                     )
                 )
 
@@ -404,7 +411,7 @@ async def seed() -> None:
 
         print(
             f"Засеяно: {topics_count} тем, {tasks_count} задач, {topic_links} связей тем с олимпиадами, "
-            f"{stages_count} дат туров, {plans_count} тарифов, {lessons_count} подтем в программе, "
+            f"{stages_count} этапов сезона олимпиад, {plans_count} тарифов, {lessons_count} подтем в программе, "
             f"{problems_count} задач к подтемам, {references_count} ссылок на литературу, "
             f"{theory_count} конспектов подтем, "
             f"{bvi_count} олимпиад в БВИ-навигаторе ({bvi_cells} ячеек льгот)"

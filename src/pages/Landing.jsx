@@ -37,10 +37,15 @@ function useNow(intervalMs = 60000) {
   return now
 }
 
+const COUNTDOWN_OLYMPIAD = 'fizteh'
+
+// Ближайший тур или финал по предмету. starts_at есть только у подтверждённых дат до дня;
+// сроки регистрации в отсчёт не идут — он про сами туры.
 const nextStage = (stages, subject, now) =>
   stages
-    .filter((s) => s.subject === subject)
+    .filter((s) => s.subject === subject && s.kind !== 'registration' && s.starts_at)
     .map((s) => ({ ...s, date: new Date(s.starts_at) }))
+    .sort((a, b) => a.date - b.date)
     .find((s) => s.date > now)
 
 /* ——— Хиро: один чертёж, который перетекает из темы в тему ———
@@ -210,7 +215,8 @@ function HeroWords({ text, delay = 0 }) {
 
 function Countdown({ olympiads }) {
   const now = useNow()
-  const olympiad = olympiads.find((o) => (o.stages || []).length > 0)
+  // Отсчёт — до туров «Физтеха»: у него точные даты по обоим предметам.
+  const olympiad = olympiads.find((o) => o.id === COUNTDOWN_OLYMPIAD)
   if (!olympiad) return null
   const rows = [
     ['physics', 'Физика'],

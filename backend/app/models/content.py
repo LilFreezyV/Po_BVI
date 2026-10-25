@@ -77,7 +77,11 @@ class Task(Base):
 
 
 class OlympiadStage(Base):
-    """Тур или этап олимпиады навигатора по предмету с точной датой — для обратного отсчёта."""
+    """Этап сезона олимпиады навигатора: регистрация, тур отбора или финал.
+
+    Даты с точностью до дня или месяца (`*_precision`); при точности «месяц» starts_on —
+    первое число месяца, ends_on — последнее. Нет дат — этап известен, а сроки нет (см. note).
+    """
 
     __tablename__ = "olympiad_stages"
 
@@ -85,10 +89,36 @@ class OlympiadStage(Base):
     olympiad_id: Mapped[str] = mapped_column(
         ForeignKey("bvi_olympiads.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    subject: Mapped[SubjectEnum] = mapped_column(SubjectType, nullable=False)
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    subject: Mapped[SubjectEnum | None] = mapped_column(SubjectType, nullable=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    starts_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    start_precision: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    ends_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    end_precision: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    approximate: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Точнее сроки не станут (назначает каждый регион и т. п.) — бот не напоминает уточнить.
+    settled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    time_msk: Mapped[str | None] = mapped_column(String(5), nullable=True)
     note: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+
+class DateWatchSnapshot(Base):
+    """Последний снимок строк с датами со страницы олимпиады (app/date_watch.py).
+    Без внешнего ключа: сид пересобирает навигатор, а снимки должны его пережить."""
+
+    __tablename__ = "date_watch_snapshots"
+
+    olympiad_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    url: Mapped[str] = mapped_column(String(500), nullable=False)
+    status_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    excerpt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    error: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    checked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    failing_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class TopicOlympiad(Base):
@@ -288,10 +318,11 @@ class BviOlympiad(Base):
     organizer: Mapped[str] = mapped_column(String(255), nullable=False)
     grades: Mapped[str] = mapped_column(String(64), nullable=False)
     status: Mapped[str] = mapped_column(String(64), nullable=False)
-    registration: Mapped[str | None] = mapped_column(Text, nullable=True)
-    selection: Mapped[str | None] = mapped_column(Text, nullable=True)
-    final: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Короткое имя для календаря и сообщений бота: «Физтех», «КФУ».
+    short_title: Mapped[str | None] = mapped_column(String(64), nullable=True)
     site_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # Страница с расписанием, за которой следит проверка дат; по умолчанию — site_url.
+    dates_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     reg_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     chat_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     # Раздел с заданиями прошлых лет на сайте олимпиады: адрес и как он там назван.
@@ -302,7 +333,7 @@ class BviOlympiad(Base):
         back_populates="olympiad", cascade="all, delete-orphan"
     )
     stages: Mapped[list["OlympiadStage"]] = relationship(
-        order_by="OlympiadStage.starts_at", cascade="all, delete-orphan"
+        order_by="OlympiadStage.position", cascade="all, delete-orphan"
     )
 
 
@@ -322,16 +353,3 @@ class BviBenefit(Base):
     prize: Mapped[str] = mapped_column(String(16), nullable=False)
 
     olympiad: Mapped["BviOlympiad"] = relationship(back_populates="benefits")
-
-
-class BviDate(Base):
-    """Ближайшие даты сезона. ends_on — когда событие перестаёт быть актуальным."""
-
-    __tablename__ = "bvi_dates"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    position: Mapped[int] = mapped_column(Integer, nullable=False)
-    label: Mapped[str] = mapped_column(String(64), nullable=False)
-    ends_on: Mapped[date | None] = mapped_column(Date, nullable=True)
-    olympiad: Mapped[str] = mapped_column(String(255), nullable=False)
-    note: Mapped[str] = mapped_column(Text, nullable=False)
