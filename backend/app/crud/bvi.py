@@ -4,7 +4,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.content import BviDate, BviOlympiad, BviUniversity
+from app import olympiad_dates
+from app.bvi_meta import GENERAL_DATES, HIGHLIGHTS, LEGEND, SOURCES, UPDATED_ON
+from app.models.content import BviOlympiad, BviUniversity, OlympiadStage
 from app.schemas.bvi import (
     BviBenefitOut,
     BviDateOut,
@@ -16,7 +18,33 @@ from app.schemas.bvi import (
     BviUniversityOut,
     OlympiadStageOut,
 )
-from app.bvi_meta import HIGHLIGHTS, LEGEND, SOURCES, UPDATED_ON
+
+
+def stage_out(s: OlympiadStage) -> OlympiadStageOut:
+    return OlympiadStageOut(
+        kind=s.kind,
+        subject=s.subject.value if s.subject is not None else None,
+        title=s.title,
+        starts_on=s.starts_on,
+        ends_on=s.ends_on,
+        start_precision=s.start_precision,
+        end_precision=s.end_precision,
+        approximate=s.approximate,
+        time_msk=s.time_msk,
+        note=s.note,
+        dates_text=olympiad_dates.dates_text(s),
+        starts_at=olympiad_dates.starts_at(s),
+    )
+
+
+async def load_olympiads(session: AsyncSession) -> list[BviOlympiad]:
+    return (
+        await session.scalars(
+            select(BviOlympiad)
+            .options(selectinload(BviOlympiad.benefits), selectinload(BviOlympiad.stages))
+            .order_by(BviOlympiad.position)
+        )
+    ).all()
 
 
 async def get_bvi(session: AsyncSession, today: date | None = None) -> BviOut:
@@ -26,14 +54,7 @@ async def get_bvi(session: AsyncSession, today: date | None = None) -> BviOut:
     unis = (
         await session.scalars(select(BviUniversity).order_by(BviUniversity.position))
     ).all()
-    olympiads = (
-        await session.scalars(
-            select(BviOlympiad)
-            .options(selectinload(BviOlympiad.benefits), selectinload(BviOlympiad.stages))
-            .order_by(BviOlympiad.position)
-        )
-    ).all()
-    dates = (await session.scalars(select(BviDate).order_by(BviDate.position))).all()
+    olympiads = await load_olympiads(session)
 
     return BviOut(
         updated_on=UPDATED_ON,
@@ -49,26 +70,18 @@ async def get_bvi(session: AsyncSession, today: date | None = None) -> BviOut:
         ],
         olympiads=[
             BviOlympiadOut(
-                id=o.id, title=o.title, level=o.level, organizer=o.organizer,
-                grades=o.grades, status=o.status, registration=o.registration,
-                selection=o.selection, final=o.final, site_url=o.site_url,
+                id=o.id, title=o.title, short_title=o.short_title, level=o.level,
+                organizer=o.organizer, grades=o.grades, status=o.status, site_url=o.site_url,
                 reg_url=o.reg_url, chat_url=o.chat_url, archive_url=o.archive_url,
                 archive_note=o.archive_note,
                 benefits=[
                     BviBenefitOut(university_id=b.university_id, winner=b.winner, prize=b.prize)
                     for b in o.benefits
                 ],
-                stages=[
-                    OlympiadStageOut(subject=s.subject.value, title=s.title, starts_at=s.starts_at, note=s.note)
-                    for s in o.stages
-                ],
+                stages=[stage_out(s) for s in o.stages],
             )
             for o in olympiads
         ],
-        # Прошедшее не показываем: список дат быстро превращается в архив.
-        dates=[
-            BviDateOut(label=d.label, ends_on=d.ends_on, olympiad=d.olympiad, note=d.note)
-            for d in dates
-            if d.ends_on is None or d.ends_on >= today
-        ],
+        # Календарь строится из этапов; прошедшее не показываем — список быстро стал бы архивом.
+        dates=[BviDateOut(**item) for item in olympiad_dates.calendar_items(olympiads, today, GENERAL_DATES)],
     )

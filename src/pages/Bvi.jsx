@@ -37,6 +37,12 @@ const LEVEL_CHIP = {
 }
 
 
+const STAGE_KINDS = [
+  ['registration', 'Регистрация'],
+  ['selection', 'Отбор'],
+  ['final', 'Финал'],
+]
+
 function Cell({ code }) {
   const meta = CELL[code] || CELL.unknown
   return (
@@ -191,7 +197,7 @@ function Dates({ items }) {
         <AnimatePresence initial={false}>
           {shown.map((d) => (
             <motion.article
-              key={`${d.label}-${d.olympiad}`}
+              key={`${d.label}-${d.olympiad}-${d.note}`}
               variants={staggerItem}
               layout
               exit={{ opacity: 0 }}
@@ -227,11 +233,11 @@ function Dates({ items }) {
 function OlympiadCard({ o, universities }) {
   const bvi = o.benefits.filter((b) => b.winner === 'bvi' || b.winner === 'bvi_part')
   const full = o.benefits.filter((b) => b.winner === 'bvi')
-  const stages = [
-    ['Регистрация', o.registration],
-    ['Отбор', o.selection],
-    ['Финал', o.final],
-  ].filter(([, v]) => v)
+  // Навигатор — про физику: этапы только по математике (у «Физтеха») здесь не показываем.
+  const physics = o.stages.filter((s) => s.subject === null || s.subject === 'physics')
+  const stages = STAGE_KINDS.map(([kind, label]) => [label, physics.filter((s) => s.kind === kind)]).filter(
+    ([, list]) => list.length > 0
+  )
 
   return (
     <motion.article variants={staggerItem} id={`oly-${o.id}`} className="card scroll-mt-24 p-6">
@@ -250,10 +256,27 @@ function OlympiadCard({ o, universities }) {
       </p>
 
       <dl className="mt-5 space-y-3 border-t border-line pt-4">
-        {stages.map(([label, value]) => (
+        {stages.map(([label, list]) => (
           <div key={label} className="grid grid-cols-[88px_1fr] gap-3">
             <dt className="font-mono text-[11px] uppercase tracking-[0.08em] text-ink-400">{label}</dt>
-            <dd className="text-[14px] leading-relaxed text-ink-700">{value}</dd>
+            <dd className="space-y-1 text-[14px] leading-relaxed text-ink-700">
+              {list.map((s, i) => (
+                <p key={i}>
+                  {s.title && <span className="font-semibold">{s.title}: </span>}
+                  {s.dates_text && (
+                    <span className={s.approximate || s.start_precision === 'month' ? 'text-ink-500' : ''}>
+                      {s.dates_text}
+                    </span>
+                  )}
+                  {s.note && (
+                    <span className="text-ink-500">
+                      {s.dates_text ? ' · ' : ''}
+                      {s.note}
+                    </span>
+                  )}
+                </p>
+              ))}
+            </dd>
           </div>
         ))}
       </dl>

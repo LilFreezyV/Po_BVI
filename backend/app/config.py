@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24 * 7
     cors_origins: str = "http://localhost:5173"
+    # Ключ для POST /api/internal/date-watch (вызывает GitHub Actions). Не задан — ручка выключена.
+    date_watch_token: str | None = None
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

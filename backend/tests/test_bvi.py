@@ -51,11 +51,26 @@ async def test_old_olympiad_api_is_gone_and_data_moved(client):
     olympiads = {o["id"]: o for o in (await client.get("/api/bvi")).json()["olympiads"]}
     # Даты туров для обратного отсчёта на главной — у «Физтеха» навигатора.
     assert {s["subject"] for s in olympiads["fizteh"]["stages"]} == {"physics", "math"}
+    assert any(s["starts_at"] for s in olympiads["fizteh"]["stages"] if s["kind"] == "selection")
 
     # «Где встречается» на странице темы — олимпиады навигатора.
     topic = (await client.get("/api/topics/kinematics")).json()
     assert topic["olympiads"]
     assert {o["id"] for o in topic["olympiads"]} <= set(olympiads)
+
+
+@pytest.mark.asyncio
+async def test_bvi_stages_are_structured(client):
+    """С 0012 даты сезона — структура: у каждой олимпиады есть финал, у этапов — подпись дат."""
+    olympiads = (await client.get("/api/bvi")).json()["olympiads"]
+    for o in olympiads:
+        assert any(s["kind"] == "final" for s in o["stages"]), o["id"]
+        for s in o["stages"]:
+            assert s["kind"] in {"registration", "selection", "final"}
+            assert s["dates_text"] or s["note"], f"{o['id']}: у этапа нет ни дат, ни примечания"
+            if s["starts_on"] and s["ends_on"]:
+                assert s["starts_on"] <= s["ends_on"]
+        assert o["short_title"]
 
 
 @pytest.mark.asyncio

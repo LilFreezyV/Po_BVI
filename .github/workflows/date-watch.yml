@@ -1,0 +1,56 @@
+name: Date watch
+
+# Раз в день проверяет страницы с датами олимпиад и пишет в общий Telegram-чат, если что-то
+# поменялось. Проверку делает наш сервер (российский IP — сайты олимпиад его пускают), а
+# в Telegram отправляет этот раннер: с сервера Telegram недоступен (его режет сеть хостера).
+# По понедельникам — ещё и сводка: какие ориентировочные даты пора уточнить и какие страницы
+# не открываются. Подробности — CLAUDE.md, раздел «Наблюдение за датами олимпиад».
+#
+# Нужны секреты репозитория: DATE_WATCH_TOKEN (тот же, что в backend/.env на сервере),
+# TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID.
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # 06:00 UTC = 09:00 МСК
+  workflow_dispatch:
+    inputs:
+      weekly:
+        description: "Добавить еженедельную сводку"
+        type: boolean
+        default: false
+
+env:
+  SITE: http://po-bvi.ru
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run check on server
+        env:
+          TOKEN: ${{ secrets.DATE_WATCH_TOKEN }}
+        run: |
+          WEEKLY=false
+          if [ "$(TZ=Europe/Moscow date +%u)" = "1" ] || [ "${{ inputs.weekly }}" = "true" ]; then
+            WEEKLY=true
+          fi
+          curl -sf --max-time 120 -X POST -H "X-Watch-Token: $TOKEN" \
+            "$SITE/api/internal/date-watch?weekly=$WEEKLY" -o result.json \
+            || (echo "Сервер не ответил на проверку дат (или неверный DATE_WATCH_TOKEN)" && exit 1)
+          jq '{checked, changed, failing, messages: (.messages | length)}' result.json
+
+      - name: Send to Telegram
+        env:
+          BOT: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          count=$(jq '.messages | length' result.json)
+          for i in $(seq 0 $((count - 1))); do
+            jq -r ".messages[$i]" result.json > message.txt
+            curl -sf -X POST "https://api.telegram.org/bot$BOT/sendMessage" \
+              --data-urlencode "chat_id=$CHAT" \
+              --data-urlencode "text@message.txt" \
+              -d disable_web_page_preview=true > /dev/null \
+              || (echo "Telegram не принял сообщение $i — проверьте TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID" && exit 1)
+          done
+          echo "Отправлено сообщений: $count"
