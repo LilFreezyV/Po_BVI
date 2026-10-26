@@ -862,8 +862,8 @@ OLYMPIADS = [
               note="конец января — февраль, онлайн на «Сириус.Онлайн»"),
             stage("final", "2027-03", approx=True, note="очно"),
         ],
-        "site_url": "https://olympiads.mccme.ru/omo/",
-        "reg_url": "https://olympiads.mccme.ru/omo/",
+        "site_url": "https://физикадлявсех.рф/union-olymp",
+        "reg_url": "https://физикадлявсех.рф/union-olymp",
         "chat_url": "https://t.me/physforeveryone",
         "position": 20,
         "benefits": {
@@ -895,8 +895,9 @@ OLYMPIADS = [
             stage("selection", None, "2027-01-10", title="Заочный отбор"),
             stage("final", "2027-02-27", note="очно"),
         ],
-        "site_url": "https://abiturient.tsu.ru/ru/content/ormo",
-        "reg_url": "https://abiturient.tsu.ru/ru/content/ormo",
+        "site_url": "https://info.abiturient.tsu.ru/ru/content/ormo",
+        "dates_url": "https://info.abiturient.tsu.ru/ru/content/date-ORMO",
+        "reg_url": "https://info.abiturient.tsu.ru/ru/content/ormo",
         "chat_url": "https://t.me/olymptsu",
         "position": 21,
         "benefits": {
@@ -928,6 +929,8 @@ OLYMPIADS = [
             stage("final", note="дата уточняется, очно"),
         ],
         "site_url": "https://olympiad.gazprom.ru/",
+        # сайт олимпиады рисует страницу скриптом — даты по каталогу olimpiada.ru
+        "dates_url": "https://olimpiada.ru/activity/5516",
         "reg_url": "https://olympiad.gazprom.ru/",
         "chat_url": "https://t.me/olymp_gazprom",
         "position": 22,
@@ -990,6 +993,8 @@ OLYMPIADS = [
             stage("final", "2027-02", approx=True, note="начало февраля, очно"),
         ],
         "site_url": "https://v-olymp.ru/volmp_physic/",
+        # сайт олимпиады рисует страницу скриптом — даты по каталогу olimpiada.ru
+        "dates_url": "https://olimpiada.ru/activity/175",
         "reg_url": "https://v-olymp.ru/volmp_physic/",
         "chat_url": "https://t.me/volymp",
         "position": 24,
@@ -1022,6 +1027,8 @@ OLYMPIADS = [
             stage("final", "2027-03", approx=True, note="очно"),
         ],
         "site_url": "https://olymp.itmo.ru/",
+        # сайт олимпиады рисует страницу скриптом — даты по каталогу olimpiada.ru
+        "dates_url": "https://olimpiada.ru/activity/5809",
         "reg_url": "https://olymp.itmo.ru/",
         "chat_url": "https://t.me/physics_olymp",
         "position": 25,
@@ -1054,6 +1061,8 @@ OLYMPIADS = [
             stage("final", "2027-02", "2027-03", approx=True, note="два очных тура"),
         ],
         "site_url": "https://school.astro.spbu.ru/",
+        # сайт кафедры астрономии СПбГУ не отвечает (2026-10-25) — даты по каталогу olimpiada.ru
+        "dates_url": "https://olimpiada.ru/activity/287",
         "reg_url": "https://school.astro.spbu.ru/",
         "chat_url": "https://vk.com/astroolympiads",
         "position": 26,

@@ -59,9 +59,27 @@ def test_date_lines_keep_only_dates_and_stages():
     ]
 
 
+def test_live_countdowns_are_ignored():
+    """«осталось 23 дня» на странице меняется каждый день — это не изменение дат."""
+    assert date_watch.date_lines("<p>Отбор с 16 ноября (осталось 23 дня).</p>") == ["Отбор с 16 ноября."]
+    assert date_watch.normalize("Финал через 5 часов") == "Финал"
+
+
 def test_diff_text_shows_added_and_removed():
     text = date_watch._diff_text("Финал — ор. март\nОтбор — 1 декабря", "Отбор — 1 декабря\nФинал — 14 марта 2027")
     assert "+ Финал — 14 марта 2027" in text and "− Финал — ор. март" in text
+
+
+def test_shared_site_lines_are_ignored():
+    """Лента новостей каталога olimpiada.ru одна на все страницы — её строки не сравниваем."""
+    page = lambda *lines: date_watch.FetchResult(200, list(lines), None)  # noqa: E731
+    targets = [(None, "https://olimpiada.ru/activity/1"), (None, "https://olimpiada.ru/activity/2"),
+               (None, "https://other.ru/")]
+    results = [page("Финал — 14 марта", "Новость: перечень утверждён 23 сентября"),
+               page("Отбор — до 11 ноября", "Новость: перечень утверждён 23 сентября"),
+               page("Новость: перечень утверждён 23 сентября")]
+    shared = date_watch._shared_lines(targets, results)
+    assert shared == {"olimpiada.ru": {"Новость: перечень утверждён 23 сентября"}}
 
 
 @pytest.mark.asyncio

@@ -14,7 +14,9 @@ import asyncio
 import difflib
 import hashlib
 import re
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field
+from urllib.parse import urlsplit
 from datetime import date, datetime
 from html.parser import HTMLParser
 
@@ -41,6 +43,18 @@ DATE_LINE = re.compile(
     r"|\b(?:тур|этап|регистрац|отбор|финал|заключительн)",
     re.IGNORECASE,
 )
+# Живые счётчики на страницах («осталось 23 дня», «через 5 часов») меняются каждый день сами по
+# себе — вырезаем их, иначе бот слал бы ложное «изменение» ежедневно.
+COUNTDOWN = re.compile(
+    r"\s*\(?\b(?:остал(?:ось|ся|ась)|через)\s+\d+\s+(?:дн\w*|день|час\w*|минут\w*|недел\w*|месяц\w*)\)?",
+    re.IGNORECASE,
+)
+
+
+def normalize(line: str) -> str:
+    return " ".join(COUNTDOWN.sub("", line).split())
+
+
 BLOCK_TAGS = {
     "p", "div", "li", "tr", "td", "th", "br", "h1", "h2", "h3", "h4", "h5", "h6",
     "section", "article", "table", "ul", "ol", "dt", "dd", "header", "footer",
@@ -76,7 +90,7 @@ def date_lines(html: str) -> list[str]:
     parser.feed(html)
     seen, lines = set(), []
     for raw in "".join(parser.parts).split("\n"):
-        line = " ".join(raw.split())
+        line = normalize(raw)
         if not line or len(line) > 400 or not DATE_LINE.search(line):
             continue
         if line not in seen:
@@ -173,6 +187,27 @@ def _chunks(header: str, blocks: list[str]) -> list[str]:
     return messages
 
 
+def _hash(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _shared_lines(targets, results) -> dict[str, set[str]]:
+    """Строки, которые есть сразу на нескольких отслеживаемых страницах одного сайта, — это
+    шапка, меню или лента новостей (у каталога olimpiada.ru она одна на все страницы), а не
+    даты конкретной олимпиады. Их не сравниваем, иначе одна новость сайта дала бы
+    уведомление по каждой олимпиаде с этого сайта."""
+    by_host: dict[str, list[set[str]]] = defaultdict(list)
+    for (_, url), result in zip(targets, results):
+        if result.lines:
+            by_host[urlsplit(url).hostname].append(set(result.lines))
+    shared = {}
+    for host, pages in by_host.items():
+        if len(pages) > 1:
+            counts = Counter(line for page in pages for line in page)
+            shared[host] = {line for line, n in counts.items() if n > 1}
+    return shared
+
+
 def weekly_summary(olympiads, snapshots: dict[str, DateWatchSnapshot], today: date) -> list[str]:
     due = []
     for o in olympiads:
@@ -217,6 +252,7 @@ async def run(session: AsyncSession, *, weekly: bool, now: datetime) -> WatchRep
 
     targets = [(o, o.dates_url or o.site_url) for o in olympiads if (o.dates_url or o.site_url)]
     results = await asyncio.gather(*(fetch(url) for _, url in targets))
+    common = _shared_lines(targets, results)
 
     report = WatchReport(checked=len(targets))
     change_blocks, failure_blocks, recovered, baseline = [], [], [], 0
@@ -240,14 +276,19 @@ async def run(session: AsyncSession, *, weekly: bool, now: datetime) -> WatchRep
         if snap.failing_since is not None and snap.content_hash is not None:
             recovered.append(name)
         snap.status_code, snap.error, snap.failing_since = 200, None, None
-        excerpt = "\n".join(result.lines)
-        digest = hashlib.sha256(excerpt.encode("utf-8")).hexdigest()
+        shared = common.get(urlsplit(url).hostname, set())
+        excerpt = "\n".join(line for line in result.lines if line not in shared)
+        digest = _hash(excerpt)
+        # Старый снимок сравниваем по тем же правилам: строка, ставшая общей для сайта
+        # (новость в «подвале» каталога), не должна выглядеть изменением.
+        old_lines = (normalize(line) for line in (snap.excerpt or "").split("\n"))
+        old = "\n".join(line for line in old_lines if line and line not in shared)
         if snap.content_hash is None or snap.url != url:
             baseline += 1  # первый снимок или сменили адрес — сравнивать не с чем
-        elif snap.content_hash != digest:
+        elif snap.content_hash != digest and _hash(old) != digest:
             report.changed.append(o.id)
             snap.changed_at = now
-            change_blocks.append(f"{name}: на странице с датами изменения\n{url}\n{_diff_text(snap.excerpt or '', excerpt)}")
+            change_blocks.append(f"{name}: на странице с датами изменения\n{url}\n{_diff_text(old, excerpt)}")
         snap.url, snap.content_hash, snap.excerpt = url, digest, excerpt
 
     await session.commit()
