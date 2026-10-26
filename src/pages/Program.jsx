@@ -1,10 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { listCurriculum, listLessonProblems, listLiterature, listTopics, setProblemStatus } from '../lib/api.js'
+import {
+  listConspects,
+  listCurriculum,
+  listLessonProblems,
+  listLiterature,
+  listTopics,
+  setProblemStatus,
+} from '../lib/api.js'
 import { useAsync } from '../lib/useAsync.js'
 import { useAuth } from '../lib/auth.jsx'
 import AttemptButtons, { ATTEMPT_CARD } from '../components/AttemptButtons.jsx'
-import { Chip, Icon, Link, SkeletonCards, SkeletonLines } from '../components/ui.jsx'
+import { Chip, Icon, Link, SkeletonCards, SkeletonLines, navigate } from '../components/ui.jsx'
 import MathText from '../components/MathText.jsx'
+import { conspectPath } from './Conspect.jsx'
 
 const asset = (path) => `${import.meta.env.BASE_URL}${path}`
 
@@ -308,7 +316,23 @@ const topicsWord = (n) => {
   return 'тем'
 }
 
-function LessonRow({ lesson, topicTitle, sources, focused }) {
+/* «Открыть конспект» — большой конспект темы сразу на разделе подтемы. Открыт только
+   вошедшим: гость по кнопке идёт на вход и после него попадает прямо в этот раздел. */
+function FullConspectButton({ to }) {
+  const { user } = useAuth()
+  return (
+    <button
+      onClick={() => navigate(user ? to : `/login?next=${encodeURIComponent(to)}`)}
+      className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-pen-700 hover:text-pen-900"
+    >
+      <Icon name="book" className="h-3.5 w-3.5" />
+      Открыть конспект
+      {!user && <span className="font-mono text-[11px] font-normal text-ink-300">после входа</span>}
+    </button>
+  )
+}
+
+function LessonRow({ lesson, topicTitle, sources, focused, conspectTo }) {
   const [open, setOpen] = useState(focused)
   useEffect(() => {
     if (focused) setOpen(true)
@@ -350,6 +374,7 @@ function LessonRow({ lesson, topicTitle, sources, focused }) {
               Конспект
             </Link>
           )}
+          {conspectTo && <FullConspectButton to={conspectTo} />}
         </div>
         {(lesson.problem_count > 0 || lesson.topic_id) && (
           <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-2">
@@ -380,7 +405,7 @@ function LessonRow({ lesson, topicTitle, sources, focused }) {
   )
 }
 
-function ModuleCard({ module, index, open, onToggle, topicTitle, sources, focusLesson }) {
+function ModuleCard({ module, index, open, onToggle, topicTitle, sources, focusLesson, conspectFor }) {
   const count = module.lessons.length
 
   return (
@@ -413,6 +438,7 @@ function ModuleCard({ module, index, open, onToggle, topicTitle, sources, focusL
               topicTitle={topicTitle(lesson.topic_id)}
               sources={sources}
               focused={lesson.id === focusLesson}
+              conspectTo={conspectFor(lesson.id)}
             />
           ))}
         </ol>
@@ -431,10 +457,34 @@ export default function Program({ focusLesson = null }) {
   const focus = parseLessonId(focusLesson)
   const [subject, setSubject] = useState(() => focus?.subject || readSavedSubject())
   const { data, loading, error } = useAsync(
-    () => Promise.all([listCurriculum(subject), listTopics(), listLiterature(subject)]),
+    () =>
+      Promise.all([
+        listCurriculum(subject),
+        listTopics(),
+        listLiterature(subject),
+        // Без больших конспектов страница должна работать как раньше — ошибку не пробрасываем.
+        listConspects(subject).catch(() => []),
+      ]),
     [subject]
   )
-  const [curriculum, topics, literature] = data || [[], [], []]
+  const [curriculum, topics, literature, conspects] = data || [[], [], [], []]
+  // Подтема → адрес её раздела в большом конспекте темы. Разделы s1…sN идут в порядке подтем
+  // темы (это сверяет scripts/load_conspects.py), поэтому считаем по полному списку, а не по
+  // отфильтрованному поиском.
+  const conspectLinks = useMemo(() => {
+    const byModule = Object.fromEntries(
+      conspects.filter((c) => c.module_id).map((c) => [c.module_id, c.number])
+    )
+    const links = {}
+    for (const module of curriculum) {
+      const number = byModule[module.id]
+      if (number == null) continue
+      module.lessons.forEach((lesson, i) => {
+        links[lesson.id] = conspectPath(subject, number, `s${i + 1}`)
+      })
+    }
+    return links
+  }, [curriculum, conspects, subject])
   const sources = useMemo(() => Object.fromEntries(literature.map((s) => [s.id, s])), [literature])
   const meta = SUBJECTS[subject]
 
@@ -634,6 +684,7 @@ export default function Program({ focusLesson = null }) {
                   topicTitle={topicTitle}
                   sources={sources}
                   focusLesson={focusLesson}
+                  conspectFor={(id) => conspectLinks[id]}
                 />
               ))}
             </div>
