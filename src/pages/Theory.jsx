@@ -14,34 +14,25 @@ import { conspectPath } from './Conspect.jsx'
 
 const gradesLabel = (grades) => (grades?.length ? `${grades.join(', ')} класс` : null)
 
-/* Полный конспект темы (большая интерактивная страница) открыт только вошедшим —
-   гость видит, что он есть, и идёт на вход, после входа возвращается прямо к разделу. */
-function FullConspect({ lesson }) {
+/* Кнопка полного конспекта у заголовка: вошедшему открывает большой конспект темы сразу на
+   этой подтеме, гостю — вход и возврат прямо в этот раздел (полные конспекты только вошедшим). */
+function FullConspectButton({ lesson }) {
   const { user } = useAuth()
   const to = conspectPath(lesson.subject, lesson.conspect_number, lesson.conspect_section)
 
-  return (
-    <div className="card mt-10 flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-      <div>
-        <p className="eyebrow mb-2">Полный конспект</p>
-        <p className="max-w-xl text-[15px] leading-relaxed text-ink-500">
-          Вся тема «{lesson.module_title}» одной интерактивной страницей: теория с выводами,
-          приёмы, разобранные задачи и задачи с подсказками. Откроется сразу на этой подтеме.
-        </p>
-      </div>
-      {user ? (
-        <button className="btn-primary shrink-0" onClick={() => navigate(to)}>
-          Полный конспект
-        </button>
-      ) : (
-        <button
-          className="btn-secondary shrink-0"
-          onClick={() => navigate(`/login?next=${encodeURIComponent(to)}`)}
-        >
-          Войти, чтобы открыть
-        </button>
-      )}
-    </div>
+  return user ? (
+    <button className="btn-primary mt-5" onClick={() => navigate(to)}>
+      <Icon name="book" className="h-4 w-4" />
+      Открыть полный конспект
+    </button>
+  ) : (
+    <button
+      className="btn-secondary mt-5"
+      onClick={() => navigate(`/login?next=${encodeURIComponent(to)}`)}
+    >
+      <Icon name="book" className="h-4 w-4" />
+      Войти, чтобы открыть полный
+    </button>
   )
 }
 
@@ -103,6 +94,8 @@ export default function Theory({ lessonId }) {
             <Chip className="bg-pen-50 text-pen-700">Конспект открыт всем</Chip>
           </div>
 
+          {data.conspect_number != null && <FullConspectButton lesson={data} />}
+
           <p className="mt-5 max-w-2xl text-[17px] leading-relaxed text-ink-500">{data.description}</p>
 
           {empty ? (
@@ -140,8 +133,6 @@ export default function Theory({ lessonId }) {
               )}
             </>
           )}
-
-          {data.conspect_number != null && <FullConspect lesson={data} />}
 
           <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-line pt-6">
             {data.task_count > 0 && (

@@ -10,7 +10,7 @@ import {
 import { useAsync } from '../lib/useAsync.js'
 import { useAuth } from '../lib/auth.jsx'
 import AttemptButtons, { ATTEMPT_CARD } from '../components/AttemptButtons.jsx'
-import { Chip, Icon, Link, SkeletonCards, SkeletonLines, navigate } from '../components/ui.jsx'
+import { Chip, Icon, Link, SkeletonCards, SkeletonLines } from '../components/ui.jsx'
 import MathText from '../components/MathText.jsx'
 import { conspectPath } from './Conspect.jsx'
 
@@ -316,19 +316,26 @@ const topicsWord = (n) => {
   return 'тем'
 }
 
-/* «Открыть конспект» — большой конспект темы сразу на разделе подтемы. Открыт только
-   вошедшим: гость по кнопке идёт на вход и после него попадает прямо в этот раздел. */
-function FullConspectButton({ to }) {
+/* Одна кнопка «Конспект»: вошедшему — большой конспект темы сразу на разделе подтемы (если
+   он загружен, сейчас только у математики), гостю — короткий конспект подтемы с пометкой, что
+   полный откроется после входа. */
+function ConspectLink({ lesson, conspectTo }) {
   const { user } = useAuth()
+  const full = Boolean(user && conspectTo)
+  if (!full && !lesson.has_theory) return null
   return (
-    <button
-      onClick={() => navigate(user ? to : `/login?next=${encodeURIComponent(to)}`)}
-      className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-pen-700 hover:text-pen-900"
-    >
-      <Icon name="book" className="h-3.5 w-3.5" />
-      Открыть конспект
-      {!user && <span className="font-mono text-[11px] font-normal text-ink-300">после входа</span>}
-    </button>
+    <span className="inline-flex items-center gap-2">
+      <Link
+        to={full ? conspectTo : `/theory/${lesson.id}`}
+        className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink-500 hover:text-pen-700"
+      >
+        <Icon name="book" className="h-3.5 w-3.5" />
+        Конспект
+      </Link>
+      {!user && conspectTo && (
+        <span className="font-mono text-[11px] text-ink-300">полный — после входа</span>
+      )}
+    </span>
   )
 }
 
@@ -365,16 +372,7 @@ function LessonRow({ lesson, topicTitle, sources, focused, conspectTo }) {
           </ul>
         )}
         <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-2">
-          {lesson.has_theory && (
-            <Link
-              to={`/theory/${lesson.id}`}
-              className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink-500 hover:text-pen-700"
-            >
-              <Icon name="book" className="h-3.5 w-3.5" />
-              Конспект
-            </Link>
-          )}
-          {conspectTo && <FullConspectButton to={conspectTo} />}
+          <ConspectLink lesson={lesson} conspectTo={conspectTo} />
         </div>
         {(lesson.problem_count > 0 || lesson.topic_id) && (
           <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-2">
