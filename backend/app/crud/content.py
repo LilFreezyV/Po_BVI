@@ -6,6 +6,7 @@ from sqlalchemy.orm import selectinload
 
 from app.crud import progress as progress_crud
 from app.models.content import (
+    Conspect,
     CurriculumLesson,
     CurriculumLessonPoint,
     CurriculumModule,
@@ -333,6 +334,9 @@ async def get_lesson_theory(session: AsyncSession, lesson_id: str) -> LessonTheo
     problem_count = await session.scalar(
         select(func.count(LessonProblem.id)).where(LessonProblem.lesson_id == lesson.id)
     )
+    conspect_number = await session.scalar(
+        select(Conspect.number).where(Conspect.module_id == lesson.module_id)
+    )
 
     return LessonTheoryOut(
         id=lesson.id,
@@ -350,4 +354,7 @@ async def get_lesson_theory(session: AsyncSession, lesson_id: str) -> LessonTheo
         problem_count=problem_count or 0,
         prev_id=siblings[index - 1] if index > 0 else None,
         next_id=siblings[index + 1] if index + 1 < len(siblings) else None,
+        conspect_number=conspect_number,
+        # Разделы конспекта идут в порядке подтем темы: s1, s2, … (сверяет load_conspects).
+        conspect_section=f"s{index + 1}" if conspect_number is not None else None,
     )

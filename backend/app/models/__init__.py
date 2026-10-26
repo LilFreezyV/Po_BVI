@@ -1,6 +1,7 @@
 from app.models.base import Base
 from app.models.content import (
     BviBenefit,
+    Conspect,
     DateWatchSnapshot,
     BviOlympiad,
     BviUniversity,
@@ -42,6 +43,7 @@ __all__ = [
     "BviOlympiad",
     "BviBenefit",
     "DateWatchSnapshot",
+    "Conspect",
     "User",
     "TaskAttempt",
     "ProblemAttempt",

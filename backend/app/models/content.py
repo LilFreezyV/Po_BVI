@@ -353,3 +353,27 @@ class BviBenefit(Base):
     prize: Mapped[str] = mapped_column(String(16), nullable=False)
 
     olympiad: Mapped["BviOlympiad"] = relationship(back_populates="benefits")
+
+
+class Conspect(Base):
+    """Большой интерактивный конспект темы — самостоятельная HTML-страница целиком.
+
+    В git их нет: файлы копируют на сервер руками и загружают scripts/load_conspects.py.
+    number 0 — оглавление курса (открыто всем), 1…N — конспекты тем (только вошедшим).
+    Внешнего ключа на curriculum_modules нет намеренно: сид пересобирает программу
+    (delete + insert), и каскад стёр бы конспекты, которые сид заново не загружает.
+    """
+
+    __tablename__ = "conspects"
+    __table_args__ = (UniqueConstraint("subject", "number", name="uq_conspects_subject_number"),)
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    subject: Mapped[SubjectEnum] = mapped_column(SubjectType, nullable=False)
+    number: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Тема программы, которой соответствует конспект; у оглавления — None.
+    module_id: Mapped[str | None] = mapped_column(String(96), nullable=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    html: Mapped[str] = mapped_column(Text, nullable=False)
+    sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

@@ -33,7 +33,7 @@ export function clearToken() {
   }
 }
 
-async function request(path, { method = 'GET', body, token } = {}) {
+async function request(path, { method = 'GET', body, token, text = false } = {}) {
   const headers = {}
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   if (token) headers['Authorization'] = `Bearer ${token}`
@@ -61,7 +61,7 @@ async function request(path, { method = 'GET', body, token } = {}) {
   }
 
   if (response.status === 204) return null
-  return response.json()
+  return text ? response.text() : response.json()
 }
 
 async function requestForm(path, formData) {
@@ -96,6 +96,10 @@ export const listLessonProblems = (lessonId, token) => request(`/curriculum/less
 export const getBvi = () => request('/bvi')
 export const getLessonTheory = (lessonId) => request(`/curriculum/lessons/${lessonId}/theory`)
 export const listLiterature = (subject = 'physics') => request(`/curriculum/literature?subject=${subject}`)
+export const listConspects = (subject = 'math') => request(`/conspects?subject=${subject}`)
+// Страница большого конспекта целиком (HTML-строка). Номер 0 — оглавление, открыто всем.
+export const getConspectHtml = (subject, number, token) =>
+  request(`/conspects/${subject}/${number}`, { token, text: true })
 
 /* ——— Авторизация ——— */
 
