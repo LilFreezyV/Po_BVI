@@ -11,6 +11,7 @@ import Theory from './pages/Theory.jsx'
 import Tiktok from './pages/Tiktok.jsx'
 import Login from './pages/Login.jsx'
 import Program from './pages/Program.jsx'
+import Conspect from './pages/Conspect.jsx'
 
 function Redirect({ to }) {
   useEffect(() => {
@@ -45,6 +46,14 @@ export default function App() {
     }
     window.scrollTo(0, 0)
   }, [path, anchor])
+
+  // Большой конспект — отдельная страница во весь экран, без шапки и подвала сайта.
+  const conspect = path.match(/^\/conspect\/(physics|math)(?:\/(\d{1,2}))?$/)
+  if (conspect) {
+    return (
+      <Conspect subject={conspect[1]} number={Number(conspect[2] || 0)} section={query.get('s')} />
+    )
+  }
 
   let page
   if (path.startsWith('/theory/')) {

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { listCurriculum } from '../lib/api.js'
+import { listConspects, listCurriculum } from '../lib/api.js'
 import { useAsync } from '../lib/useAsync.js'
 import { Chip, Icon, Link, PageHeader, ProgressBar, SkeletonCards } from '../components/ui.jsx'
 import { Reveal, Stagger, staggerItem } from '../components/motion.jsx'
@@ -17,6 +17,40 @@ const SUBJECTS = [
 ]
 
 const num = (n) => String(n).padStart(2, '0')
+
+/* Большие интерактивные конспекты (#/conspect/…): оглавление открыто всем как витрина,
+   сами конспекты — после входа (это решает страница конспекта). */
+const conspectsWord = (n) => {
+  const tens = n % 100, ones = n % 10
+  if (tens >= 11 && tens <= 14) return 'интерактивных конспектов'
+  if (ones === 1) return 'интерактивный конспект'
+  if (ones >= 2 && ones <= 4) return 'интерактивных конспекта'
+  return 'интерактивных конспектов'
+}
+
+function FullCourse({ subject, count }) {
+  return (
+    <Link
+      to={`/conspect/${subject}`}
+      className="card group mt-10 flex flex-col gap-3 p-5 transition-colors hover:border-pen-400 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+    >
+      <span>
+        <span className="eyebrow mb-2 block">Полный курс</span>
+        <span className="block font-serif text-[22px] font-semibold leading-snug text-ink-900">
+          {count} {conspectsWord(count)} — по одному на каждую тему
+        </span>
+        <span className="mt-1.5 block max-w-2xl text-[15px] leading-relaxed text-ink-500">
+          Теория с выводами, олимпиадные приёмы, разобранные задачи и задачи с подсказками,
+          ответами и решениями под спойлерами. Оглавление открыто всем, конспекты — после входа.
+        </span>
+      </span>
+      <span className="inline-flex shrink-0 items-center gap-2 text-[15px] font-semibold text-pen-700 group-hover:text-pen-900">
+        Оглавление
+        <Icon name="arrow" className="h-4 w-4" />
+      </span>
+    </Link>
+  )
+}
 const gradesLabel = (grades) => (grades?.length ? `${grades.join(', ')} класс` : null)
 
 function LessonRow({ lesson }) {
@@ -104,6 +138,8 @@ export default function Catalog() {
   const [collapsed, setCollapsed] = useState({})
 
   const { data, loading, error } = useAsync(() => listCurriculum(subject), [subject])
+  const conspects = useAsync(() => listConspects(subject), [subject])
+  const conspectCount = (conspects.data || []).filter((c) => c.number > 0).length
   const curriculum = data || []
 
   const modules = useMemo(() => {
@@ -179,6 +215,8 @@ export default function Catalog() {
           />
         </div>
       </div>
+
+      {conspectCount > 0 && !searching && <FullCourse subject={subject} count={conspectCount} />}
 
       {loading && (
         <div className="pt-10">

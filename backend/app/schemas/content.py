@@ -174,3 +174,14 @@ class LessonTheoryOut(BaseModel):
     problem_count: int = 0
     prev_id: str | None = None
     next_id: str | None = None
+    # Номер большого конспекта темы (#/conspect/<subject>/<номер>), раздел подтемы в нём — s<number>.
+    conspect_number: int | None = None
+    conspect_section: str | None = None
+
+
+class ConspectOut(BaseModel):
+    """Большой интерактивный конспект темы (без самой страницы)."""
+
+    number: int
+    title: str
+    module_id: str | None

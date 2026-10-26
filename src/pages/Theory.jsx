@@ -5,12 +5,45 @@ import { useAsync } from '../lib/useAsync.js'
 import { Chip, Icon, Link, SkeletonLines, navigate } from '../components/ui.jsx'
 import { EASE, Reveal, Stagger, staggerItem } from '../components/motion.jsx'
 import TheoryFigure from '../components/TheoryFigure.jsx'
+import { useAuth } from '../lib/auth.jsx'
+import { conspectPath } from './Conspect.jsx'
 
 /* Конспект подтемы: объяснение + тезисы + анимация приёма.
    Задач здесь нет намеренно — решают в разделе «Задачи по темам» (#/program),
    отсюда туда ведёт кнопка. */
 
 const gradesLabel = (grades) => (grades?.length ? `${grades.join(', ')} класс` : null)
+
+/* Полный конспект темы (большая интерактивная страница) открыт только вошедшим —
+   гость видит, что он есть, и идёт на вход, после входа возвращается прямо к разделу. */
+function FullConspect({ lesson }) {
+  const { user } = useAuth()
+  const to = conspectPath(lesson.subject, lesson.conspect_number, lesson.conspect_section)
+
+  return (
+    <div className="card mt-10 flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+      <div>
+        <p className="eyebrow mb-2">Полный конспект</p>
+        <p className="max-w-xl text-[15px] leading-relaxed text-ink-500">
+          Вся тема «{lesson.module_title}» одной интерактивной страницей: теория с выводами,
+          приёмы, разобранные задачи и задачи с подсказками. Откроется сразу на этой подтеме.
+        </p>
+      </div>
+      {user ? (
+        <button className="btn-primary shrink-0" onClick={() => navigate(to)}>
+          Полный конспект
+        </button>
+      ) : (
+        <button
+          className="btn-secondary shrink-0"
+          onClick={() => navigate(`/login?next=${encodeURIComponent(to)}`)}
+        >
+          Войти, чтобы открыть
+        </button>
+      )}
+    </div>
+  )
+}
 
 export default function Theory({ lessonId }) {
   const { data, loading, error } = useAsync(() => getLessonTheory(lessonId), [lessonId])
@@ -107,6 +140,8 @@ export default function Theory({ lessonId }) {
               )}
             </>
           )}
+
+          {data.conspect_number != null && <FullConspect lesson={data} />}
 
           <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-line pt-6">
             {data.task_count > 0 && (
