@@ -20,7 +20,7 @@ on:
         default: false
 
 env:
-  SITE: http://po-bvi.ru
+  SITE: https://po-bvi.ru
 
 jobs:
   watch:
