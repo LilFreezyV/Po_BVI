@@ -123,6 +123,13 @@ def expand(src: str, section: int) -> str:
     def part(label, body):
         return f'<div class="part"><span class="lbl">{label}</span>{body.strip()}</div>'
 
+    # источник задачи; url — ссылка на официальный архив олимпиады (как у математики)
+    def source(a):
+        s = a.get('src', 'Своя')
+        if 'url' in a:
+            s += f' · <a href="{a["url"]}" target="_blank" rel="noopener">условие и решение</a>'
+        return f'<span class="src">{s}</span>'
+
     def pick(body, tag):
         m = re.search(rf'<{tag}>(.*?)</{tag}>', body, re.S)
         return m[1] if m else None
@@ -134,7 +141,7 @@ def expand(src: str, section: int) -> str:
                         (('q', 'Условие'), ('idea', 'Ключевая идея'), ('r', 'Решение'), ('chk', 'Проверка'))
                         if pick(body, tag))
         return (f'<div class="prob wp" id="p-{a["n"]}"><div class="ph"><span class="pn">{a["n"]}</span>'
-                f'<span class="src">{a.get("src", "Своя")}</span></div>{parts}</div>')
+                f'{source(a)}</div>{parts}</div>')
 
     out = re.sub(r'<wp ([^>]*)>(.*?)</wp>', wp, out, flags=re.S)
     if '<wp ' in out:
@@ -148,7 +155,7 @@ def expand(src: str, section: int) -> str:
                      for tag, lbl in (('h', 'Подсказка'), ('a', 'Ответ'), ('r', 'Решение')))
         return (f'<div class="prob ex" id="p-{a["n"]}"><div class="ph"><span class="pn">{a["n"]}</span>'
                 f'<span class="stars" aria-label="сложность {s} из 3">{"★" * s}</span>'
-                f'<span class="src">{a.get("src", "Своя")}</span></div>'
+                f'{source(a)}</div>'
                 f'{part("Условие", pick(body, "q"))}<div class="spoil"></div>{sp}</div>')
 
     out = re.sub(r'<ex ([^>]*)>(.*?)</ex>', ex, out, flags=re.S)
