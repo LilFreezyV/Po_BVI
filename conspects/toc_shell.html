@@ -1,0 +1,40 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{TITLE}}</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Оглавление: светлые карточки тем в сетке; номер темы — крупно, шрифтом заголовков, как в самих конспектах */
+:root {
+  --bg:#F2F4F7; --card:#FFFFFF; --fg:#151C27; --muted:#566173; --line:#D5DBE4; --accent:#2747B8; --warm:#D2601C;
+  --display:"Unbounded", "Golos Text", system-ui, sans-serif; --body:"Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif; --mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0E131B; --card:#161D28; --fg:#E7ECF3; --muted:#97A3B5; --line:#2A3445; --accent:#8EA7FF; --warm:#F28E4C; color-scheme: dark } }
+:root[data-theme="dark"] { --bg:#0E131B; --card:#161D28; --fg:#E7ECF3; --muted:#97A3B5; --line:#2A3445; --accent:#8EA7FF; --warm:#F28E4C; color-scheme: dark }
+body { background:var(--bg); color:var(--fg); font:16px/1.55 var(--body); padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); padding-block:40px 64px }
+.wrap { max-width:1120px; margin:0 auto; display:flex; flex-direction:column; gap:32px }
+.eyebrow { font:500 12px/1.4 var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:0 }
+h1 { font:700 clamp(28px, 5vw, 46px)/1.1 var(--display); margin:8px 0 12px; text-wrap:balance }
+.intro p { max-width:68ch; margin:0 0 10px; color:var(--muted) }
+.stats { display:flex; flex-wrap:wrap; gap:8px 24px; font:500 13px/1.4 var(--mono); color:var(--fg); font-variant-numeric:tabular-nums }
+.stats b { color:var(--accent); font-weight:500 }
+.grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap:16px }
+.topic { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:20px; display:flex; flex-direction:column; gap:12px; min-width:0 }
+.topic header { display:flex; gap:14px; align-items:flex-start }
+.num { font:700 30px/1 var(--display); color:var(--accent); min-width:2ch; font-variant-numeric:tabular-nums }
+.th { min-width:0 }
+h2 { font:600 17px/1.3 var(--body); margin:0; text-wrap:balance }
+h2 a { color:inherit; text-decoration:none } h2 a:hover { color:var(--accent) }
+.meta { margin:4px 0 0; font:400 12px/1.4 var(--mono); color:var(--muted); letter-spacing:.02em }
+.lead { margin:0; font-size:14px; color:var(--muted) }
+details { border-top:1px solid var(--line); padding-top:10px }
+summary { cursor:pointer; font:500 12px/1.4 var(--mono); text-transform:uppercase; letter-spacing:.08em; color:var(--fg) }
+summary:focus-visible, a:focus-visible { outline:2px solid var(--accent); outline-offset:3px; border-radius:4px }
+ol { list-style:none; margin:10px 0 0; padding:0; display:flex; flex-direction:column; gap:6px }
+li { display:grid; grid-template-columns:2.4ch 1fr auto; gap:10px; font-size:14px; line-height:1.4 }
+.sn { font:400 12px/1.6 var(--mono); color:var(--muted); font-variant-numeric:tabular-nums }
+.sc { font:400 11px/1.7 var(--mono); color:var(--muted); white-space:nowrap }
+.open { margin-top:auto; align-self:flex-start; font:500 14px/1.4 var(--body); color:var(--accent); text-decoration:none }
+.open:hover { text-decoration:underline }
+footer { font-size:13px; color:var(--muted); max-width:72ch }
+</style>
+</head><body>{{BODY}}</body></html>

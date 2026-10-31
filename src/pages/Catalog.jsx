@@ -28,7 +28,10 @@ const conspectsWord = (n) => {
   return 'интерактивных конспектов'
 }
 
-function FullCourse({ subject, count }) {
+// total — число тем программы: конспекты по физике пишутся по одной теме, и пока готовы
+// не все, «по одному на каждую тему» было бы неправдой.
+function FullCourse({ subject, count, total }) {
+  const partial = total > 0 && count < total
   return (
     <Link
       to={`/conspect/${subject}`}
@@ -37,7 +40,9 @@ function FullCourse({ subject, count }) {
       <span>
         <span className="eyebrow mb-2 block">Полный курс</span>
         <span className="block font-serif text-[22px] font-semibold leading-snug text-ink-900">
-          {count} {conspectsWord(count)} — по одному на каждую тему
+          {partial
+            ? `${count} ${conspectsWord(count)} из ${total} — остальные темы готовятся`
+            : `${count} ${conspectsWord(count)} — по одному на каждую тему`}
         </span>
         <span className="mt-1.5 block max-w-2xl text-[15px] leading-relaxed text-ink-500">
           Теория с выводами, олимпиадные приёмы, разобранные задачи и задачи с подсказками,
@@ -216,7 +221,7 @@ export default function Catalog() {
         </div>
       </div>
 
-      {conspectCount > 0 && !searching && <FullCourse subject={subject} count={conspectCount} />}
+      {conspectCount > 0 && !searching && <FullCourse subject={subject} count={conspectCount} total={curriculum.length} />}
 
       {loading && (
         <div className="pt-10">
