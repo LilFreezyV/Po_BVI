@@ -7,8 +7,10 @@ const G = 9.81;
 const F = (x, n = 2) => (Number.isFinite(x) ? x.toFixed(n).replace('.', ',').replace('-', '−') : '—');
 const pct = (a, b) => Math.abs(a - b) / Math.max(Math.abs(b), 1e-12) * 100;
 // строка сверки: величина, численно, «теория (N): …; расхождение …», укладывается ли в допуск
-const cmp = (name, num, th, unit, ref, tol = 0.1) => [
-  name, `${F(num, 3)} ${unit}`, `(${ref}): ${F(th, 3)} ${unit}; расхождение ${F(pct(num, th), 3)} %`, pct(num, th) <= tol];
+// Если теория даёт ноль, относительное расхождение бессмысленно — сравниваем по абсолютной разности.
+const cmp = (name, num, th, unit, ref, tol = 0.1) => Math.abs(th) < 1e-9
+  ? [name, `${F(num, 3)} ${unit}`, `(${ref}): 0 ${unit}; отличие ${F(Math.abs(num), 6)} ${unit}`, Math.abs(num) < 1e-6]
+  : [name, `${F(num, 3)} ${unit}`, `(${ref}): ${F(th, 3)} ${unit}; расхождение ${F(pct(num, th), 3)} %`, pct(num, th) <= tol];
 
 // Момент, когда fn(t) обращается в ноль внутри шага [a, b], — бисекцией до машинной точности.
 // Линейная интерполяция для квадратичных законов давала ошибку на коротких полётах.
