@@ -12,6 +12,7 @@ import Tiktok from './pages/Tiktok.jsx'
 import Login from './pages/Login.jsx'
 import Program from './pages/Program.jsx'
 import Conspect from './pages/Conspect.jsx'
+import Economics from './pages/Economics.jsx'
 
 function Redirect({ to }) {
   useEffect(() => {
@@ -75,6 +76,9 @@ export default function App() {
     page = <Archive />
   } else if (path === '/program') {
     page = <Program focusLesson={query.get('lesson')} />
+  } else if (path === '/economics' || path.startsWith('/economics/')) {
+    // Демо-раздел: в меню его нет, только прямая ссылка.
+    page = <Economics taskId={path.slice('/economics/'.length)} />
   } else if (path === '/login') {
     page = <Login next={query.get('next')} />
   } else {

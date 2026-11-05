@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Задача 8 с конспектом</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;700&family=STIX+Two+Text:ital,wght@0,400;1,400&family=JetBrains+Mono:wght@400;600&family=Caveat:wght@600&display=swap">
+<style>
+*{box-sizing:border-box}body{margin:0}[hidden]{display:none!important}
+/* Слева крупно текущий шаг, справа конспект: готовые шаги уменьшаются и складываются туда. В конце — вся доска. */
+:root{
+  --bg:#ffffff; --fg:#131417; --muted:#6b6f78; --line:#e2e4e9; --soft:#f4f5f7;
+  --accent:#2457d6; --red:#d23a26; --ok:#178a5c;
+  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-math:"STIX Two Text","Times New Roman",Georgia,serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --f-hand:"Caveat","Comic Sans MS",cursive;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#08090a; --fg:#f0f0ec; --muted:#8b8f97; --line:#25272c; --soft:#131417;
+  --accent:#7ba3ff; --red:#ff6b55; --ok:#41d395; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#08090a; --fg:#f0f0ec; --muted:#8b8f97; --line:#25272c; --soft:#131417;
+  --accent:#7ba3ff; --red:#ff6b55; --ok:#41d395; color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:17px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;transition:background .35s,color .35s;overflow-x:hidden}
+.wrap{flex:1;min-height:0;width:100%;max-width:1560px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:26px}
+.wrap.final{grid-template-columns:minmax(0,1fr)}
+.wrap.final .aside{display:none}
+.stage{min-width:0;min-height:0;position:relative;cursor:pointer;padding-block:24px 10px}
+.slide{display:none;height:100%;grid-template-columns:minmax(0,0.92fr) minmax(0,1.08fr);gap:40px;align-items:center}
+.slide.on{display:grid;animation:inR .5s cubic-bezier(.2,.7,.2,1)}
+.slide.on.back{animation-name:inL}
+.slide.wide{grid-template-columns:minmax(0,1fr);align-content:center}
+@keyframes inR{from{opacity:0;transform:translateX(50px)}}
+@keyframes inL{from{opacity:0;transform:translateX(-50px)}}
+.txt{display:flex;flex-direction:column;gap:16px;min-width:0}
+.eyebrow{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(32px,4.4vw,58px);line-height:1.05;margin:0;font-weight:700;letter-spacing:-.02em;text-wrap:balance}
+h2{font-size:clamp(23px,2.5vw,33px);line-height:1.15;margin:0;font-weight:700;text-wrap:balance}
+p{margin:0;max-width:60ch}
+.muted{color:var(--muted)}
+.m{font-family:var(--f-math);font-size:clamp(19px,1.95vw,26px);line-height:1.45}
+.m i,.ms i,.cm i{font-style:italic}.m sub,.ms sub,.cm sub{font-size:.62em}.m sup,.cm sup{font-size:.6em}
+.ms{font-family:var(--f-math);font-size:1.12em}
+.box{border:2px solid var(--fg);border-radius:10px;padding:6px 16px;width:fit-content;max-width:100%}
+.box.acc{border-color:var(--accent)}
+.red{color:var(--red)}.acc{color:var(--accent)}.ok{color:var(--ok)}
+.an{position:relative;display:inline-block}
+.an .mk{position:absolute;left:-1em;right:-1em;text-align:center;bottom:72%;font-family:var(--f-hand);font-size:.95em;color:var(--red);line-height:1}
+.cond{font-size:16px;border-left:3px solid var(--line);padding-left:16px}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.card{background:var(--soft);border-radius:12px;padding:14px 16px}
+.card b{display:block;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:4px}
+.tbl{border-collapse:collapse;font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:15px}
+.tbl td{padding:7px 18px 7px 0;border-bottom:1px solid var(--line)}
+.tbl td.c{color:var(--muted)}
+.tbl tr.big td:last-child{font-weight:600}
+.chain{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:15px}
+.chain span{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:3px 10px}
+.panels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
+.pan{min-width:0;display:flex;flex-direction:column;gap:6px}
+.pan .tag{font-family:var(--f-mono);font-size:15px;font-weight:600}
+.pan svg{width:100%;height:auto;display:block}
+.pan .cap{font-size:15px;color:var(--muted)}
+[data-f]{opacity:0;transform:translateY(12px);transition:opacity .5s ease,transform .5s ease}
+[data-f].vis{opacity:1;transform:none}
+.chart{min-width:0;display:flex;flex-direction:column;justify-content:center}
+.chart svg{width:100%;height:auto;max-height:calc(100vh - 160px);display:block}
+/* svg */
+.ax{stroke:var(--fg);stroke-width:1.6;fill:none}
+.ah{fill:var(--fg)}
+.gr{stroke:var(--line);stroke-width:1;fill:none}
+.d45{stroke:var(--muted);stroke-width:1.5;fill:none;stroke-dasharray:7 6}
+.ln{stroke:var(--fg);stroke-width:2.8;fill:none}
+.ln.ghost{stroke:var(--muted);stroke-width:1.8;stroke-dasharray:3 5}
+.ln.red{stroke:var(--red)}
+.proj{stroke:var(--muted);stroke-width:1.1;stroke-dasharray:4 4;fill:none}
+.web{stroke:var(--accent);stroke-width:2.4;fill:none;stroke-linecap:round}
+.web.red{stroke:var(--red)}
+.arr{fill:var(--accent)}.arr.red{fill:var(--red)}
+.pt{fill:var(--accent)}.pt.red{fill:var(--red)}.pt.fg{fill:var(--fg)}.pt.acc{fill:var(--accent)}
+.tm{fill:var(--fg);font-family:var(--f-math);font-style:italic;font-size:19px}
+.tl{fill:var(--muted);font-family:var(--f-mono);font-size:13px}
+.tv{fill:var(--fg);font-family:var(--f-mono);font-size:15px;font-weight:600}
+.tv.red{fill:var(--red)}.tv.acc{fill:var(--accent)}
+.hand{fill:var(--red);font-family:var(--f-hand);font-size:24px}
+.sl{stroke:var(--red);stroke-width:3;fill:none}
+.sl.ghost{stroke:var(--muted);stroke-width:1.8;stroke-dasharray:3 5}
+.drw{stroke-dasharray:1;stroke-dashoffset:1;animation:drw .6s ease forwards}
+.pop{animation:pop .45s ease both}
+@keyframes drw{to{stroke-dashoffset:0}}
+@keyframes pop{from{opacity:0}}
+/* конспект */
+.aside{min-width:0;min-height:0;border-left:1px solid var(--line);padding:24px 0 10px 18px;display:flex;flex-direction:column;gap:10px;overflow-y:auto}
+.aside .h{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between}
+.empty{font-size:14px;color:var(--muted);border:1.5px dashed var(--line);border-radius:10px;padding:14px}
+.cc{box-sizing:border-box;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:4px;transition:border-color .2s,opacity .4s;text-align:left;font:inherit;color:inherit;width:100%}
+.cc:hover{border-color:var(--muted)}
+.cc:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.cc .ct{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.cc .cm{font-family:var(--f-math);font-size:16px;line-height:1.35}
+.cc svg{width:100%;height:auto;display:block}
+.cc .mini3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.cc .mini3 span{font-family:var(--f-mono);font-size:9px;font-weight:600}
+.cc.incoming{opacity:0}
+.cc.fresh{animation:glow 1.4s ease}
+@keyframes glow{0%{box-shadow:0 0 0 3px var(--accent)}100%{box-shadow:0 0 0 0 transparent}}
+.fly{position:fixed;z-index:60;pointer-events:none;margin:0;transform-origin:0 0;transition:transform .65s cubic-bezier(.5,0,.2,1),opacity .65s ease;display:grid!important;animation:none!important;background:var(--bg)}
+/* итоговая доска */
+.board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-content:start}
+.board .cc svg{max-height:25vh}
+.slide[data-id="s7"]{overflow:auto}
+.board .cc{cursor:default;padding:16px 18px;gap:8px}
+.board .cc .ct{font-size:12px}
+.board .cc .cm{font-size:20px}
+.board .cc .mini3 span{font-size:12px}
+.board .span2{grid-column:span 2}
+/* низ */
+.bar{max-width:1560px;width:100%;margin:0 auto;display:flex;align-items:center;gap:10px;padding-block:10px 14px;border-top:1px solid var(--line);flex-wrap:wrap}
+.bar .who{font-size:13px;color:var(--muted);margin-right:auto}
+.prog{display:flex;gap:5px}
+.prog span{width:22px;height:4px;border-radius:2px;background:var(--line);transition:background .3s}
+.prog span.on{background:var(--fg)}
+.btn{font:inherit;font-size:14px;background:var(--soft);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:7px 14px;cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hint{font-size:12px;color:var(--muted)}
+@media (max-width:1000px){
+  html,body{height:auto}
+  .wrap{grid-template-columns:minmax(0,1fr)}
+  .slide{grid-template-columns:minmax(0,1fr);gap:22px;height:auto}
+  .panels{grid-template-columns:minmax(0,1fr)}
+  .aside{border-left:0;border-top:1px solid var(--line);padding:14px 0;flex-direction:row;overflow-x:auto;overflow-y:hidden}
+  .aside .h{display:none}
+  .aside .cc,.aside .empty{min-width:220px;flex:0 0 220px}
+  .board{grid-template-columns:minmax(0,1fr)}
+  .board .span2{grid-column:auto}
+  .hint{display:none}
+  .chart svg{max-height:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .slide.on{animation:none}[data-f]{transition:none}.drw{animation:none;stroke-dashoffset:0}.pop{animation:none}.cc.fresh{animation:none}
+}
+</style>
+
+<div class="wrap" id="wrap">
+<div class="stage" id="stage">
+
+<section class="slide" data-id="s0">
+  <div class="txt">
+    <div class="eyebrow">Очный интенсив по экономике · Казань</div>
+    <h1>№ 8. Временной лаг в налогообложении</h1>
+    <p class="muted">Задача Максима Земцова</p>
+    <p class="cond" data-f="1">Домохозяйства потребляют ¾ располагаемого дохода и ещё 40 д.е. Инвестиции 100, госзакупки 60. Подоходный налог по ставке <span class="ms"><i>τ</i></span> берут с дохода <b>прошлого</b> года.</p>
+  </div>
+  <div class="cards">
+    <div class="card" data-f="2"><b>Потребление</b><span class="m"><i>C<sub>t</sub></i> = 40 + 0,75<i>Y</i><sup>d</sup><sub><i>t</i></sub></span></div>
+    <div class="card" data-f="2"><b>Налог с лагом</b><span class="m"><i>T<sub>t</sub></i> = <i>τ</i>·<i>Y</i><sub><i>t</i>−1</sub></span></div>
+    <div class="card" data-f="3"><b>Инвестиции</b><span class="m"><i>I</i> = 100</span></div>
+    <div class="card" data-f="3"><b>Госзакупки</b><span class="m"><i>G</i> = 60</span></div>
+  </div>
+</section>
+
+<section class="slide wide" data-id="s1">
+  <div class="txt">
+    <div class="eyebrow">Пункт а · шаг 1</div>
+    <h2>Выводим, как выпуск зависит от прошлого года</h2>
+    <div class="m" data-f="1"><i>E<sub>t</sub></i> = <i>C<sub>t</sub></i> + <i>I<sub>t</sub></i> + <i>G<sub>t</sub></i> = 40 + 0,75<i>Y</i><sup>d</sup><sub><i>t</i></sub> + 100 + 60</div>
+    <div class="m" data-f="2">= 200 + 0,75(<i>Y<sub>t</sub></i> − <i>T<sub>t</sub></i>)</div>
+    <div class="m" data-f="3">= 200 + 0,75(<i>Y<sub>t</sub></i> − <span class="red"><i>τY</i><sub><i>t</i>−1</sub></span>) = <i>Y<sub>t</sub></i> <span class="muted" style="font-family:var(--f-body);font-size:16px">— равновесие: расходы = выпуск</span></div>
+    <div class="m box acc" data-f="4"><i>Y<sub>t</sub></i>(<i>Y</i><sub><i>t</i>−1</sub>) = 800 − 3<i>τ</i>·<i>Y</i><sub><i>t</i>−1</sub></div>
+    <p data-f="5">Выпуск сегодня зависит от выпуска вчера, причём <b>с минусом</b>: много вчера → мало сегодня, и наоборот. Отсюда будут колебания.</p>
+  </div>
+</section>
+
+<section class="slide" data-id="s2">
+  <div class="txt">
+    <div class="eyebrow">Пункт а · шаг 2</div>
+    <h2>Строим фазовую диаграмму</h2>
+    <p data-f="1">Оси: выпуск прошлого года <span class="ms"><i>Y</i><sub><i>t</i>−1</sub></span> и текущего <span class="ms"><i>Y<sub>t</sub></i></span>.</p>
+    <p data-f="2">Линия 45°: <span class="ms"><i>Y<sub>t</sub></i> = <i>Y</i><sub><i>t</i>−1</sub></span>, выпуск не меняется.</p>
+    <p data-f="3">Наша функция <span class="ms"><i>Y<sub>t</sub></i>(<i>Y</i><sub><i>t</i>−1</sub>)</span>, убывающая прямая. Возьмём <span class="ms"><i>τ</i> = 0,2</span>.</p>
+    <p data-f="4">Пересечение — стационарное состояние <span class="ms"><i>Y</i>*</span>.</p>
+    <p data-f="5"><span class="acc"><b>Паутина:</b></span> вверх до прямой, вбок до 45°, и снова. Выпуск скачет вокруг <span class="ms"><i>Y</i>*</span> и сходится.</p>
+  </div>
+  <div class="chart"><svg id="g2" viewBox="0 0 540 540"></svg></div>
+</section>
+
+<section class="slide wide" data-id="s3">
+  <div class="txt">
+    <div class="eyebrow">Пункт а · шаг 3</div>
+    <h2>От ставки зависит, сойдётся ли паутина</h2>
+    <div class="panels">
+      <div class="pan" data-f="1"><span class="tag ok">S.S.S. · τ &lt; 1/3</span><svg id="g3a" viewBox="0 0 360 340"></svg><span class="cap">Наклон меньше 1: колебания затухают</span></div>
+      <div class="pan" data-f="2"><span class="tag red">U.S.S. · τ = 1/3</span><svg id="g3b" viewBox="0 0 360 340"></svg><span class="cap">Наклон ровно 1: вечный цикл-квадрат</span></div>
+      <div class="pan" data-f="3"><span class="tag red">U.S.S. · τ &gt; 1/3</span><svg id="g3c" viewBox="0 0 360 340"></svg><span class="cap">Наклон больше 1: колебания разлетаются</span></div>
+    </div>
+    <div class="m box acc" data-f="4">Ответ а): |−3<i>τ</i>| &lt; 1 &nbsp;⇒&nbsp; 0 ≤ <i>τ</i> &lt; 1/3</div>
+  </div>
+</section>
+
+<section class="slide" data-id="s4">
+  <div class="txt">
+    <div class="eyebrow">Пункт б</div>
+    <h2>Равновесный выпуск при τ = 0,2</h2>
+    <div class="m" data-f="1"><i>Y<sub>t</sub></i> = <i>Y</i><sub><i>t</i>−1</sub> = <i>Y</i>*</div>
+    <div class="m" data-f="2"><i>Y</i>* = 800 − 3<i>τY</i>*</div>
+    <div class="m" data-f="3"><i>Y</i>* = 800 / (1 + 3<i>τ</i>) = 800 / 1,6</div>
+    <div class="m box acc" data-f="4"><i>Y</i>* = 500</div>
+  </div>
+  <div class="chart"><svg id="g4" viewBox="0 0 540 540"></svg></div>
+</section>
+
+<section class="slide" data-id="s5">
+  <div class="txt">
+    <div class="eyebrow">Пункт в · постоянный шок</div>
+    <h2>Инвестиции навсегда упали на 20</h2>
+    <div class="m" data-f="1" style="padding-top:18px"><span class="an">800<span class="mk">−80</span></span> − 0,6<i>Y</i><sub><i>t</i>−1</sub> &nbsp;→&nbsp; <i>Y<sub>t</sub></i> = <span class="red">720</span> − 0,6<i>Y</i><sub><i>t</i>−1</sub> <span class="muted" style="font-family:var(--f-body);font-size:15px;white-space:nowrap">(−20 · 4 = −80)</span></div>
+    <table class="tbl">
+      <tr data-f="2"><td>2021</td><td class="c">стационарное</td><td>500</td></tr>
+      <tr data-f="3"><td>2022</td><td class="c">720 − 0,6·500</td><td class="red">420</td></tr>
+      <tr data-f="4"><td>2023</td><td class="c">720 − 0,6·420</td><td class="red">468</td></tr>
+      <tr data-f="5" class="big"><td><i class="ms">Y</i>**</td><td class="c">720 / 1,6</td><td class="red">450</td></tr>
+    </table>
+    <div data-f="2"><svg id="s5t" viewBox="0 0 420 150" style="width:100%;max-width:420px;height:auto;display:block"></svg></div>
+  </div>
+  <div class="chart"><svg id="g5" viewBox="0 0 540 540"></svg></div>
+</section>
+
+<section class="slide" data-id="s6">
+  <div class="txt">
+    <div class="eyebrow">Пункт г · временный шок</div>
+    <h2>Инвестиции упали на один год</h2>
+    <div class="m" data-f="1">2022: <i>Y<sub>t</sub></i> = <span class="red">720</span> − 0,6<i>Y</i><sub><i>t</i>−1</sub>; &nbsp; с 2023: <i>Y<sub>t</sub></i> = 800 − 0,6<i>Y</i><sub><i>t</i>−1</sub></div>
+    <table class="tbl">
+      <tr data-f="2"><td>2022</td><td class="c">720 − 0,6·500</td><td class="red">420</td></tr>
+      <tr data-f="3"><td>2023</td><td class="c">800 − 0,6·420</td><td class="red">548</td></tr>
+      <tr data-f="5" class="big"><td><i class="ms">Y</i>***</td><td class="c">800 / 1,6</td><td>500</td></tr>
+    </table>
+    <div class="chain" data-f="4"><span>Инвестиции вернулись</span>→<span>налог с плохого 2022</span>→<span>налог низкий</span>→<span>потребление выше</span>→<span class="red">548 &gt; 500</span></div>
+    <div data-f="2"><svg id="s6t" viewBox="0 0 420 150" style="width:100%;max-width:420px;height:auto;display:block"></svg></div>
+  </div>
+  <div class="chart"><svg id="g6" viewBox="0 0 540 540"></svg></div>
+</section>
+
+<section class="slide wide" data-id="s7">
+  <div class="txt" style="align-self:start">
+    <div class="eyebrow">Вся задача на одной доске</div>
+    <div class="board" id="board"></div>
+    <p data-f="1" style="max-width:80ch">Плохой год → на следующий налог маленький → потребление растёт → выпуск перелетает равновесие. Хороший год → налог большой → выпуск недолетает. Пока <span class="ms"><i>τ</i> &lt; 1/3</span>, эти качели затухают.</p>
+  </div>
+</section>
+</div>
+
+<aside class="aside" id="aside" aria-label="Конспект"></aside>
+</div>
+
+<div class="bar">
+  <div class="who">№ 8 · Максим Земцов</div>
+  <span class="hint">клик, → или пробел — дальше · ← назад · клик по конспекту — вернуться к шагу</span>
+  <div class="prog" id="prog"></div>
+  <button class="btn" id="prev" aria-label="Назад">←</button>
+  <button class="btn" id="next" aria-label="Дальше">→</button>
+  <button class="btn" id="theme">Чёрный фон</button>
+</div>
+
+<script>
+const NS="http://www.w3.org/2000/svg";
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+let timers=[];const later=(fn,ms)=>{if(reduce)fn();else timers.push(setTimeout(fn,ms))};
+const el=(t,a,p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e};
+
+function Phase(svg,o){
+  svg.innerHTML="";
+  const W=+svg.viewBox.baseVal.width,H=+svg.viewBox.baseVal.height;
+  const L=o.pad||64,R=W-30,T=30,B=H-54,lo=o.lo,hi=o.hi;
+  const sx=v=>L+(v-lo)/(hi-lo)*(R-L), sy=v=>B-(v-lo)/(hi-lo)*(B-T);
+  const cl=v=>Math.max(lo,Math.min(hi,v));
+  const show=i=>o.f>=i, fresh=i=>o.anim&&o.f===i;
+  return{sx,sy,
+    axes(ticks){
+      if(ticks)ticks.forEach(v=>{
+        el("line",{x1:sx(v),y1:B,x2:sx(v),y2:T,class:"gr"},svg);el("line",{x1:L,y1:sy(v),x2:R,y2:sy(v),class:"gr"},svg);
+        el("text",{x:sx(v),y:B+20,class:"tl","text-anchor":"middle"},svg).textContent=v;
+        el("text",{x:L-8,y:sy(v)+4,class:"tl","text-anchor":"end"},svg).textContent=v});
+      el("path",{d:`M${L} ${T-12}V${B}H${R+12}`,class:"ax"},svg);
+      el("path",{d:`M${R+14} ${B}l-10 -5v10z`,class:"ah"},svg);el("path",{d:`M${L} ${T-14}l-5 10h10z`,class:"ah"},svg);
+      if(o.nolabels)return;
+      el("text",{x:L+10,y:T-2,class:"tm"},svg).innerHTML="Y<tspan baseline-shift='sub' font-size='12'>t</tspan>";
+      el("text",{x:R+8,y:B+44,class:"tm","text-anchor":"end"},svg).innerHTML="Y<tspan baseline-shift='sub' font-size='12'>t−1</tspan>";
+    },
+    diag(i,label=true){if(!show(i))return;const e=lo+(hi-lo)*.93;
+      el("path",{d:`M${sx(lo)} ${sy(lo)}L${sx(e)} ${sy(e)}`,class:"d45"+(fresh(i)?" drw":""),pathLength:1},svg);
+      if(label&&!o.nolabels){const t=el("text",{x:sx(e)-4,y:sy(e)-8,class:"tm"+(fresh(i)?" pop":""),"text-anchor":"end",style:"font-size:16px"},svg);
+        t.innerHTML="Y<tspan baseline-shift='sub' font-size='11'>t</tspan> = Y<tspan baseline-shift='sub' font-size='11'>t−1</tspan>"}},
+    line(a,b,cls,i,label){if(!show(i))return;
+      const xa=Math.max(lo,(a-hi)/b),xb=Math.min(hi,(a-lo)/b);
+      el("path",{d:`M${sx(xa)} ${sy(a-b*xa)}L${sx(xb)} ${sy(a-b*xb)}`,class:"ln "+(cls||"")+(fresh(i)?" drw":""),pathLength:1},svg);
+      if(label&&!o.nolabels){const x=xa+(xb-xa)*.82,t=el("text",{x:sx(x)+6,y:sy(a-b*x)-12,class:"tm"+(fresh(i)?" pop":""),style:"font-size:16px"+(cls==="red"?";fill:var(--red)":"")},svg);
+        if(label===1)t.innerHTML="Y<tspan baseline-shift='sub' font-size='11'>t</tspan>(Y<tspan baseline-shift='sub' font-size='11'>t−1</tspan>)";else t.textContent=label}},
+    eq(v,txt,i,cls){if(!show(i))return;const g=el("g",{class:fresh(i)?"pop":""},svg);
+      el("path",{d:`M${sx(v)} ${sy(v)}V${B}M${sx(v)} ${sy(v)}H${L}`,class:"proj"},g);
+      el("circle",{cx:sx(v),cy:sy(v),r:6.5,class:"pt "+(cls||"fg")},g);
+      if(txt)el("text",{x:sx(v)+12,y:sy(v)+22,class:"tv "+(cls||"")},g).textContent=txt},
+    hand(x,y,txt,i){if(!show(i))return;el("text",{x,y,class:"hand"+(fresh(i)?" pop":"")},svg).textContent=txt},
+    web(ys,steps,cls){
+      el("circle",{cx:sx(cl(ys[0])),cy:sy(cl(ys[0])),r:5.5,class:"pt "+(cls||"")},svg);
+      let delay=0;
+      for(let k=1;k<ys.length;k++){
+        const si=steps[k-1];if(si===undefined||!show(si))break;
+        const isNew=fresh(si);
+        [[ys[k-1],ys[k-1],ys[k-1],ys[k]],[ys[k-1],ys[k],ys[k],ys[k]]].forEach(s=>{
+          const draw=()=>{
+            const x1=sx(cl(s[0])),y1=sy(cl(s[1])),x2=sx(cl(s[2])),y2=sy(cl(s[3]));
+            el("path",{d:`M${x1} ${y1}L${x2} ${y2}`,class:"web "+(cls||"")+(isNew?" drw":""),pathLength:1,style:isNew?"animation-duration:.35s":""},svg);
+            if(Math.hypot(x2-x1,y2-y1)>20)el("path",{d:"M7 0L-5 -6L-5 6z",class:"arr "+(cls||""),transform:`translate(${(x1+x2)/2} ${(y1+y2)/2}) rotate(${Math.atan2(y2-y1,x2-x1)*180/Math.PI})`},svg);
+          };
+          if(isNew){later(draw,delay);delay+=320}else draw();
+        });
+        if(ys[k]<lo||ys[k]>hi)break;
+      }
+    },
+    val(v,txt,i,cls,dx=12,dy=-12){if(!show(i))return;const g=el("g",{class:fresh(i)?"pop":""},svg);
+      el("circle",{cx:sx(v),cy:sy(v),r:6,class:"pt "+(cls||"")},g);
+      el("text",{x:sx(v)+dx,y:sy(v)+dy,class:"tv "+(cls||"")},g).textContent=txt}
+  };
+}
+const run=(a,b,y0,n,A)=>{const y=[y0];for(let i=1;i<=n;i++)y.push((A?A(i):a)-b*y[i-1]);return y};
+
+function Years(svg,vals,shown,ghost,eqs){
+  svg.innerHTML="";const L=44,R=405,T=12,B=118,lo=400,hi=560,n=vals.length-1;
+  const X=i=>L+i*(R-L)/n,Y=v=>B-(v-lo)/(hi-lo)*(B-T);
+  [420,500,560].forEach(v=>el("text",{x:L-6,y:Y(v)+4,class:"tl","text-anchor":"end"},svg).textContent=v);
+  eqs.forEach(v=>el("path",{d:`M${L} ${Y(v)}H${R}`,class:"proj"},svg));
+  vals.forEach((v,i)=>el("text",{x:X(i),y:B+20,class:"tl","text-anchor":"middle"},svg).textContent="'"+(21+i));
+  el("path",{d:`M${L} ${T}V${B}H${R}`,class:"ax"},svg);
+  if(ghost)el("path",{d:ghost.map((v,i)=>(i?"L":"M")+X(i)+" "+Y(v)).join(""),class:"sl ghost"},svg);
+  const s=vals.slice(0,shown);
+  if(s.length>1)el("path",{d:s.map((v,i)=>(i?"L":"M")+X(i)+" "+Y(v)).join(""),class:"sl"},svg);
+  s.forEach((v,i)=>el("circle",{cx:X(i),cy:Y(v),r:i===s.length-1?5:3,class:"pt red"},svg));
+}
+const shockT=i=>i===1?720:800;
+const THREE=[["g3a",0.6,320,1,10],["g3b",1,300,2,2],["g3c",1.25,300,3,9]];
+function threeInto(svg,b,y0,n,f,i,anim,mini){
+  const P=Phase(svg,{lo:0,hi:900,f,anim,pad:30,nolabels:mini});
+  P.axes();P.diag(0,false);P.line(800,b,"",0,mini?0:1);
+  const ys=800/(1+b);P.eq(ys,"",0);
+  if(!mini)el("text",{x:P.sx(ys)+10,y:P.sy(ys)+24,class:"tm"},svg).textContent="Y*";
+  if(f>=i)P.web(run(800,b,y0,n),Array(n).fill(i),b===0.6?"":"red");
+}
+
+const scenes={
+  s2(f,anim){const P=Phase(document.getElementById("g2"),{lo:0,hi:900,f,anim});
+    P.axes([200,400,600,800]);P.diag(2);P.line(800,0.6,"",3,1);P.eq(500,"Y* = 500",4);
+    if(f>=5)P.web(run(800,0.6,250,9),Array(9).fill(5),"")},
+  s3(f,anim){THREE.forEach(([id,b,y0,i,n])=>threeInto(document.getElementById(id),b,y0,n,f,i,anim,false))},
+  s4(f,anim){const P=Phase(document.getElementById("g4"),{lo:0,hi:900,f,anim});
+    P.axes([200,400,600,800]);P.diag(0);P.line(800,0.6,"",0,1);P.eq(500,"Y* = 500",4,"acc")},
+  s5(f,anim){const P=Phase(document.getElementById("g5"),{lo:350,hi:650,f,anim});
+    P.axes([400,450,500,550,600]);P.diag(0);
+    P.line(800,0.6,f>=1?"ghost":"",0,f>=1?"было":1);
+    P.line(720,0.6,"red",1,"720 − 0,6Y");P.hand(P.sx(420),P.sy(560),"−80",1);
+    P.eq(500,"500",0);
+    const ys=run(720,0.6,500,10);
+    P.web(ys,[3,4,5,5,5,5,5,5,5,5],"red");
+    if(f>=3&&f<5)P.val(ys[f-2],String(Math.round(ys[f-2])),f,"red");
+    P.eq(450,"Y** = 450",5,"red");
+    Years(document.getElementById("s5t"),run(720,0.6,500,6),f<3?1:f===3?2:f===4?3:7,null,[500,450])},
+  s6(f,anim){const P=Phase(document.getElementById("g6"),{lo:350,hi:650,f,anim});
+    P.axes([400,450,500,550,600]);P.diag(0);
+    const shock=f===2;
+    P.line(720,0.6,shock?"red":"ghost",1,shock?"2022: 720 − 0,6Y":"");
+    P.line(800,0.6,shock?"ghost":"",0,1);
+    P.eq(500,"",0);
+    P.web(run(0,0.6,500,10,shockT),[2,3,5,5,5,5,5,5,5,5],"red");
+    if(f===2)P.val(420,"420",2,"red",12,22);
+    if(f===3||f===4)P.val(548,"548 > 500",f,"red");
+    P.eq(500,"Y*** = 500",5,"fg");
+    Years(document.getElementById("s6t"),run(0,0.6,500,6,shockT),f<2?1:f===2?2:f<5?3:7,run(720,0.6,500,6),[500])},
+  s7(){const b=document.getElementById("board");b.innerHTML="";
+    ["s0","s1","s4","s2","s3","s5","s6"].forEach(k=>b.appendChild(cardEl(k,true)))}
+};
+
+/* Карточки конспекта: сжатая версия каждого шага */
+const Yt="<i>Y<sub>t</sub></i>",Yp="<i>Y</i><sub><i>t</i>−1</sub>";
+const CARDS={
+  s0:{t:"Условие",h:`<div class="cm"><i>C</i> = 40 + 0,75<i>Y</i><sup>d</sup> · <i>T<sub>t</sub></i> = <i>τ</i>${Yp}</div><div class="cm"><i>I</i> = 100 · <i>G</i> = 60</div>`},
+  s1:{t:"Модель",h:`<div class="cm"><b>${Yt} = 800 − 3<i>τ</i>${Yp}</b></div>`},
+  s2:{t:"Фазовая диаграмма",h:`<svg viewBox="0 0 360 300"></svg>`,draw:c=>{const P=Phase(c.querySelector("svg"),{lo:0,hi:900,f:9,anim:false,pad:30,nolabels:true});
+      P.axes();P.diag(0);P.line(800,0.6,"",0);P.eq(500,"",0);P.web(run(800,0.6,250,9),Array(9).fill(0),"")}},
+  s3:{t:"а) Устойчивость",cls:"span2",h:`<div class="mini3"><div><span class="ok">τ &lt; 1/3</span><svg viewBox="0 0 360 340"></svg></div><div><span class="red">τ = 1/3</span><svg viewBox="0 0 360 340"></svg></div><div><span class="red">τ &gt; 1/3</span><svg viewBox="0 0 360 340"></svg></div></div><div class="cm">0 ≤ <i>τ</i> &lt; 1/3</div>`,
+    draw:c=>c.querySelectorAll("svg").forEach((s,j)=>{const [,b,y0,i,n]=THREE[j];threeInto(s,b,y0,n,9,0,false,true)})},
+  s4:{t:"б) Равновесие",h:`<div class="cm"><i>Y</i>* = 800 / (1 + 3<i>τ</i>)</div><div class="cm">τ = 0,2: <b class="acc"><i>Y</i>* = 500</b></div>`},
+  s5:{t:"в) Постоянный шок",h:`<div class="cm">${Yt} = <span class="red">720</span> − 0,6${Yp}</div><div class="cm">500 → 420 → 468 → <b class="red">450</b></div><svg viewBox="0 0 420 150"></svg>`,
+    draw:c=>Years(c.querySelector("svg"),run(720,0.6,500,6),7,null,[500,450])},
+  s6:{t:"г) Временный шок",h:`<div class="cm">420 → <b class="red">548</b> → 500</div><div class="cm" style="font-size:.85em">налог с плохого года → перелёт</div><svg viewBox="0 0 420 150"></svg>`,
+    draw:c=>Years(c.querySelector("svg"),run(0,0.6,500,6,shockT),7,run(720,0.6,500,6),[500])}
+};
+function cardEl(k,big){
+  const d=CARDS[k],c=document.createElement(big?"div":"button");
+  c.className="cc"+(big&&d.cls?" "+d.cls:"");
+  if(!big){c.type="button";c.title="Вернуться к этому шагу";c.dataset.k=k}
+  c.innerHTML=`<span class="ct">${d.t}</span>${d.h}`;
+  if(d.draw)d.draw(c);
+  return c;
+}
+
+/* Навигация */
+const slides=[...document.querySelectorAll(".slide")];
+const ids=slides.map(s=>s.dataset.id);
+const maxF=slides.map(s=>Math.max(0,...[...s.querySelectorAll("[data-f]")].map(e=>+e.dataset.f),{s2:5,s5:5,s6:5}[s.dataset.id]||0));
+let cur=0,frag=0;
+const prog=document.getElementById("prog");slides.forEach(()=>prog.appendChild(document.createElement("span")));
+const aside=document.getElementById("aside"),wrap=document.getElementById("wrap");
+
+function renderAside(incomingK){
+  aside.innerHTML=`<div class="h"><span>Конспект</span><span>${cur}/${slides.length-1}</span></div>`;
+  const done=ids.slice(0,cur).filter(k=>CARDS[k]);
+  if(!done.length){const e=document.createElement("div");e.className="empty";e.textContent="Сюда будут складываться готовые шаги, чтобы всё нужное оставалось перед глазами.";aside.appendChild(e)}
+  let inc=null;
+  done.forEach(k=>{const c=cardEl(k,false);if(k===incomingK){c.classList.add("incoming");inc=c}aside.appendChild(c)});
+  return inc;
+}
+function render(anim,dir,incomingK){
+  timers.forEach(clearTimeout);timers=[];
+  wrap.classList.toggle("final",ids[cur]==="s7");
+  slides.forEach((s,i)=>{const on=i===cur;
+    if(on&&dir&&!s.classList.contains("on"))s.classList.toggle("back",dir<0);
+    s.classList.toggle("on",on)});
+  const s=slides[cur];
+  s.querySelectorAll("[data-f]").forEach(e=>e.classList.toggle("vis",+e.dataset.f<=frag));
+  [...prog.children].forEach((p,i)=>p.classList.toggle("on",i<=cur));
+  const sc=scenes[ids[cur]];if(sc)sc(frag,anim);
+  return renderAside(incomingK);
+}
+function makeGhost(i){
+  const s=slides[i],r=s.getBoundingClientRect();
+  const g=s.cloneNode(true);g.querySelectorAll("[id]").forEach(e=>e.removeAttribute("id"));
+  g.classList.remove("on","back");g.classList.add("fly");
+  Object.assign(g.style,{left:r.left+"px",top:r.top+"px",width:r.width+"px",height:r.height+"px"});
+  return{g,r};
+}
+function flyInto(ghost,card){
+  if(!ghost||!card||reduce){if(card){card.classList.remove("incoming");card.classList.add("fresh")}return}
+  card.scrollIntoView({block:"nearest"});
+  document.body.appendChild(ghost.g);
+  const t=card.getBoundingClientRect(),r=ghost.r;
+  const k=Math.min(t.width/r.width,t.height/r.height);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    ghost.g.style.transform=`translate(${t.left-r.left}px,${t.top-r.top}px) scale(${k})`;
+    ghost.g.style.opacity="0.15";
+  }));
+  setTimeout(()=>{ghost.g.remove();card.classList.remove("incoming");card.classList.add("fresh")},650);
+}
+function next(){
+  if(frag<maxF[cur]){frag++;render(true);return}
+  if(cur>=slides.length-1)return;
+  const leaving=ids[cur],goingFinal=ids[cur+1]==="s7";
+  const ghost=CARDS[leaving]&&!goingFinal?makeGhost(cur):null;
+  slides[cur].classList.remove("on");cur++;frag=0;
+  const card=render(true,1,leaving);
+  flyInto(ghost,card);
+}
+function prev(){if(frag>0){frag--;render(false)}else if(cur>0){slides[cur].classList.remove("on");cur--;frag=maxF[cur];render(false,-1)}}
+function jump(k){const i=ids.indexOf(k);if(i<0)return;slides[cur].classList.remove("on");cur=i;frag=maxF[i];render(false,-1)}
+aside.addEventListener("click",e=>{const c=e.target.closest(".cc[data-k]");if(c)jump(c.dataset.k)});
+document.getElementById("next").onclick=e=>{e.stopPropagation();next()};
+document.getElementById("prev").onclick=e=>{e.stopPropagation();prev()};
+document.getElementById("stage").addEventListener("click",next);
+document.addEventListener("keydown",e=>{
+  if(e.target.closest&&e.target.closest(".cc")&&(e.key==="Enter"||e.key===" "))return;
+  if(["ArrowRight","ArrowDown","PageDown"," ","Enter"].includes(e.key)){e.preventDefault();next()}
+  if(["ArrowLeft","ArrowUp","PageUp","Backspace"].includes(e.key)){e.preventDefault();prev()}
+});
+const tb=document.getElementById("theme");
+const isDark=()=>{const t=document.documentElement.dataset.theme;return t?t==="dark":matchMedia("(prefers-color-scheme: dark)").matches};
+const sync=()=>tb.textContent=isDark()?"Белый фон":"Чёрный фон";
+tb.onclick=e=>{e.stopPropagation();document.documentElement.dataset.theme=isDark()?"light":"dark";sync()};
+sync();render(false);
+</script>
+
+</html>
