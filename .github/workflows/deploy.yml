@@ -2,6 +2,11 @@ name: Deploy
 
 on:
   workflow_dispatch:
+    inputs:
+      load_physics_conspects:
+        description: "Загрузить 14 конспектов по физике и оглавление"
+        type: boolean
+        default: false
 
 env:
   DEPLOY_HOST: 89.111.136.194
@@ -61,6 +66,18 @@ jobs:
             python -m alembic upgrade head
           "
 
+      - name: Load physics conspects
+        if: inputs.load_physics_conspects
+        run: |
+          ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" "
+            set -e
+            cd $REMOTE_PATH
+            backend/.venv/bin/python conspects/build.py
+            cd backend
+            .venv/bin/python -m scripts.load_conspects ../conspects/dist/physics --subject physics --dry-run
+            .venv/bin/python -m scripts.load_conspects ../conspects/dist/physics --subject physics
+          "
+
       - name: Restart services
         run: |
           ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" \
@@ -71,6 +88,14 @@ jobs:
           sleep 3
           curl -sf "http://$DEPLOY_HOST/api/subjects" > /dev/null && echo "Деплой ОК" || (echo "Бэкенд не отвечает после деплоя!" && exit 1)
           curl -sf -o /dev/null "http://$DEPLOY_HOST/" && echo "Фронтенд ОК" || (echo "Фронтенд не отвечает после деплоя!" && exit 1)
+
+      - name: Verify published physics conspects
+        if: inputs.load_physics_conspects
+        run: |
+          set -o pipefail
+          curl -fsS "http://$DEPLOY_HOST/api/conspects?subject=physics" |
+            jq -e 'map(.number) | sort == [range(0; 15)]' > /dev/null
+          curl -fsS -o /dev/null "http://$DEPLOY_HOST/api/conspects/physics/0"
 
       - name: Clean up old releases (keep last 5)
         if: always()
