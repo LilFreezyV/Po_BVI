@@ -52,7 +52,7 @@ async def lesson_problems(
 async def lesson_theory(
     lesson_id: str, session: AsyncSession = Depends(get_db)
 ) -> LessonTheoryOut:
-    """Конспект подтемы. Открыт всем: теория у нас без пейвола, платные только задачи."""
+    """Конспект подтемы. Открыт всем."""
     result = await content_crud.get_lesson_theory(session, lesson_id)
     if result is None:
         raise HTTPException(status_code=404, detail="Подтема не найдена")

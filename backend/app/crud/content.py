@@ -18,8 +18,7 @@ from app.models.content import (
     Topic,
     TopicOlympiad,
 )
-from app.models.enums import LevelEnum, SubjectEnum
-from app.models.user import User
+from app.models.enums import SubjectEnum
 from app.schemas.common import TopicProgressOut
 from app.schemas.content import (
     CurriculumLessonOut,
@@ -76,7 +75,7 @@ async def list_topics(
                 title=topic.title,
                 blurb=topic.blurb,
                 minutes=topic.minutes,
-                free=topic.free,
+                free=True,
                 order_index=topic.order_index,
                 olympiad_ids=[link.olympiad_id for link in topic.olympiad_links],
                 progress=progress,
@@ -102,24 +101,19 @@ async def get_topic_detail(
     if topic is None:
         return None
 
-    user = await session.get(User, user_id) if user_id is not None else None
-    subscribed = bool(user and user.subscription_active)
-    locked = not topic.free and not subscribed
-
     statuses = await progress_crud.task_statuses(session, user_id, [t.id for t in topic.tasks])
     tasks_by_level: dict[str, list[TaskOut]] = {"easy": [], "medium": [], "hard": []}
     for task in sorted(topic.tasks, key=lambda t: (t.level.value, t.position)):
-        level_locked = locked and task.level != LevelEnum.easy
         tasks_by_level[task.level.value].append(
             TaskOut(
                 id=task.id,
                 level=task.level.value,
-                text=None if level_locked else task.text,
-                source=None if level_locked else task.source,
-                hint=None if level_locked else task.hint,
-                solution=None if level_locked else task.solution,
-                locked=level_locked,
-                status=None if level_locked else statuses.get(task.id),
+                text=task.text,
+                source=task.source,
+                hint=task.hint,
+                solution=task.solution,
+                locked=False,
+                status=statuses.get(task.id),
             )
         )
 
@@ -136,8 +130,8 @@ async def get_topic_detail(
         title=topic.title,
         blurb=topic.blurb,
         minutes=topic.minutes,
-        free=topic.free,
-        locked=locked,
+        free=True,
+        locked=False,
         theory=TheoryOut(
             summary=topic.theory_summary,
             points=[p.text for p in sorted(topic.theory_points, key=lambda p: p.position)],

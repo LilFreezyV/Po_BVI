@@ -36,10 +36,13 @@ async def test_free_topic_fully_visible_to_anonymous(client):
 
 
 @pytest.mark.asyncio
-async def test_paid_topic_gated_for_anonymous(client):
+async def test_all_levels_of_formerly_paid_topic_visible_to_anonymous(client):
     response = await client.get("/api/topics/newton")
     assert response.status_code == 200
     body = response.json()
-    assert body["locked"] is True
-    assert all(task["text"] is None and task["locked"] is True for task in body["tasks"]["hard"])
-    assert all(task["text"] is not None for task in body["tasks"]["easy"])
+    assert body["free"] is True
+    assert body["locked"] is False
+    for level in ("easy", "medium", "hard"):
+        tasks = body["tasks"][level]
+        assert tasks
+        assert all(task["text"] and task["locked"] is False for task in tasks)
