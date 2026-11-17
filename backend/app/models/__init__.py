@@ -1,4 +1,5 @@
 from app.models.base import Base
+from app.models.collections import CollectionAsset, CollectionBook, CollectionChapter, CollectionTask
 from app.models.content import (
     BviBenefit,
     Conspect,
@@ -25,6 +26,10 @@ from app.models.user import User
 
 __all__ = [
     "Base",
+    "CollectionAsset",
+    "CollectionBook",
+    "CollectionChapter",
+    "CollectionTask",
     "Section",
     "Topic",
     "TheoryPoint",
