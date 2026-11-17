@@ -1,14 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react'
-import renderMathInElement from 'katex/contrib/auto-render'
 import 'katex/dist/katex.min.css'
 import './collections.css'
 import { Link, PageHeader, navigate } from '../components/ui.jsx'
 import { getCollectionAsset, getCollectionChapter, listCollectionBooks, searchCollectionTasks } from '../lib/api.js'
 import { useAuth } from '../lib/auth.jsx'
+import { expandTaskLabels, formatCollectionText, searchSnippet } from '../lib/collectionMath.js'
 import { useAsync } from '../lib/useAsync.js'
 
 function chapterPath(book, number, anchor) {
   return `/collections/${book}/${number}${anchor ? '?at=' + encodeURIComponent(anchor) : ''}`
+}
+
+function SearchExcerpt({ text }) {
+  const excerpt = useRef(null)
+  useEffect(() => {
+    excerpt.current.textContent = searchSnippet(text)
+    formatCollectionText(excerpt.current)
+  }, [text])
+  return <p className="collection-excerpt mt-1 text-sm text-ink-500" ref={excerpt} />
 }
 
 function TaskSearch({ books, book, token }) {
@@ -28,7 +37,7 @@ function TaskSearch({ books, book, token }) {
       }}>
         <input
           type="search" maxLength={160} value={input}
-          className="min-w-0 flex-1 border border-line bg-white px-3 py-2"
+          className="collection-control min-w-0 flex-1 px-3 py-2"
           placeholder="Номер или слова из условия" aria-label="Поиск задачи"
           onChange={(event) => {
             setInput(event.target.value)
@@ -47,8 +56,8 @@ function TaskSearch({ books, book, token }) {
               {data.items.map((item) => (
                 <li key={`${item.book}/${item.chapter}/${item.anchor}`}>
                   <Link to={chapterPath(item.book, item.chapter, item.anchor)} className="block py-3 hover:text-pen-700">
-                    <strong>№ {item.number} · {books.find((entry) => entry.slug === item.book)?.title}</strong>
-                    <p className="mt-1 text-sm text-ink-500">{item.excerpt}{item.excerpt.length === 220 ? '…' : ''}</p>
+                    <strong>Задача {item.number} · {books.find((entry) => entry.slug === item.book)?.title}</strong>
+                    <SearchExcerpt text={item.excerpt} />
                   </Link>
                 </li>
               ))}
@@ -83,12 +92,7 @@ function Contents({ book }) {
   )
 }
 
-const DELIMITERS = [
-  { left: '\\[', right: '\\]', display: true },
-  { left: '\\(', right: '\\)', display: false },
-]
-
-function ChapterBody({ html, anchor, path, token }) {
+function ChapterBody({ html, anchor, path, token, chapterControl }) {
   const root = useRef(null)
   const downloads = useRef(null)
   const [message, setMessage] = useState('')
@@ -125,7 +129,7 @@ function ChapterBody({ html, anchor, path, token }) {
     }, { rootMargin: '300px' })
     container.querySelectorAll('img[data-asset]').forEach((img) => observer.observe(img))
     container.querySelectorAll('a[data-asset]').forEach((link) => link.setAttribute('href', '#'))
-    renderMathInElement(container, { delimiters: DELIMITERS, throwOnError: false, trust: false })
+    formatCollectionText(container)
     return () => {
       controller.abort()
       observer.disconnect()
@@ -192,10 +196,13 @@ function ChapterBody({ html, anchor, path, token }) {
   }
 
   return <>
-    <div className="mb-5 flex flex-wrap gap-2">
-      <button className="btn-secondary" onClick={() => root.current.querySelectorAll('details').forEach((node) => { node.open = true })}>Развернуть решения</button>
-      <button className="btn-secondary" onClick={() => root.current.querySelectorAll('details').forEach((node) => { node.open = false })}>Свернуть</button>
-      <button className="btn-secondary" onClick={printChapter} disabled={printing}>{printing ? 'Загружаем рисунки…' : 'Печать'}</button>
+    <div className="collection-toolbar mb-6 flex flex-wrap items-end justify-between gap-4">
+      {chapterControl}
+      <div className="flex flex-wrap items-center gap-2">
+        <button className="collection-action" onClick={() => root.current.querySelectorAll('details').forEach((node) => { node.open = true })}>Раскрыть решения</button>
+        <button className="collection-action" onClick={() => root.current.querySelectorAll('details').forEach((node) => { node.open = false })}>Свернуть</button>
+        <button className="collection-action" onClick={printChapter} disabled={printing}>{printing ? 'Загружаем рисунки…' : 'Печать'}</button>
+      </div>
       {message && <p role="status">{message}</p>}
     </div>
     <div className="collection-content" ref={root} onClick={follow} dangerouslySetInnerHTML={{ __html: html }} />
@@ -211,18 +218,16 @@ function Chapter({ book, number, anchor, path, token }) {
   if (!chapter) return <p>Глава не найдена.</p>
   if (loading) return <p role="status">Загружаем главу…</p>
   if (error) return <p role="alert">{error.message}</p>
-  return (
-    <>
-      <label className="mb-5 flex flex-wrap items-center gap-2">
-        Глава
-        <select className="max-w-full border border-line bg-white p-2"
-          value={number} onChange={(event) => navigate(chapterPath(book.slug, event.target.value))}>
-          {book.chapters.map((entry) => <option value={entry.number} key={entry.number}>{entry.title}</option>)}
-        </select>
-      </label>
-      <ChapterBody html={data.html} anchor={anchor} path={path} token={token} />
-    </>
+  const chapterControl = (
+    <label className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-ink-700">
+      Глава
+      <select className="collection-control min-w-0 max-w-full px-3 py-2 text-ink-900"
+        value={number} onChange={(event) => navigate(chapterPath(book.slug, event.target.value))}>
+        {book.chapters.map((entry) => <option value={entry.number} key={entry.number}>{entry.title}</option>)}
+      </select>
+    </label>
   )
+  return <ChapterBody html={data.html} anchor={anchor} path={path} token={token} chapterControl={chapterControl} />
 }
 
 export default function Collections({ path, bookSlug, chapterNumber, anchor }) {
@@ -239,9 +244,11 @@ export default function Collections({ path, bookSlug, chapterNumber, anchor }) {
   }, [chapterNumber])
   return (
     <>
-      <PageHeader eyebrow="Физика" title={book?.title || 'Сборники'}
-        text={book?.intro || book?.description || 'Задачники по физике с оглавлениями, рисунками и разборами.'} />
-      <section className="collection-page container-x py-10">
+      <div className="container-x min-w-0 pt-8 sm:pt-12">
+        <PageHeader title={book?.title || 'Сборники по физике'}
+          text={expandTaskLabels(book?.intro || book?.description || 'Задачники с оглавлениями, рисунками и разборами.')} />
+      </div>
+      <section className="collection-page container-x min-w-0 pb-12 pt-6 sm:pt-8">
         {authLoading ? <p>Проверяем вход…</p> : !user ? (
           <Link className="btn-primary" to={`/login?next=${encodeURIComponent(next)}`}>Войти, чтобы открыть сборники</Link>
         ) : loading ? <p>Загружаем сборники…</p> : error ? <p role="alert">{error.message}</p> : (
@@ -253,8 +260,8 @@ export default function Collections({ path, bookSlug, chapterNumber, anchor }) {
             <TaskSearch books={books || []} book={bookSlug} token={token} />
             {bookSlug ? !book ? <p>Сборник не найден.</p> : (
               <>
-                <p className="mb-4 text-sm text-ink-500">
-                  {(book.stats?.length ? book.stats : [book.count]).join(' · ')} ·{' '}
+                <p className="mb-4 text-sm leading-relaxed text-ink-500">
+                  {expandTaskLabels((book.stats?.length ? book.stats : [book.count]).join(' · '))} ·{' '}
                   <a className="underline" href={book.source} target="_blank" rel="noreferrer">Источник</a>
                 </p>
                 {chapterNumber ? <Chapter book={book} number={chapterNumber} anchor={anchor} path={path} token={token} /> : <Contents book={book} />}
@@ -262,10 +269,10 @@ export default function Collections({ path, bookSlug, chapterNumber, anchor }) {
             ) : books?.length ? (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {books.map((entry) => (
-                  <Link key={entry.slug} to={`/collections/${entry.slug}`} className="block border border-line bg-white p-5 hover:border-pen-300">
+                  <Link key={entry.slug} to={`/collections/${entry.slug}`} className="collection-book">
                     <p className="text-xs font-semibold text-pen-700">{entry.eyebrow}</p>
                     <h2 className="mt-2 font-serif text-2xl">{entry.title}</h2>
-                    <p className="mt-2 text-sm leading-relaxed">{entry.description}</p>
+                    <p className="mt-2 text-sm leading-relaxed text-ink-500">{expandTaskLabels(entry.description)}</p>
                     <p className="mt-4 font-mono text-sm text-ink-500">{entry.count}</p>
                   </Link>
                 ))}
