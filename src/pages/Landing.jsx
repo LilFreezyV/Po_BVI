@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useAnimationFrame, useInView, useReducedMotion } from 'framer-motion'
 import { AUDIENCE } from '../data/site.js'
-import { getBvi, listPlans, listSections, listTopics } from '../lib/api.js'
+import { getBvi, listSections, listTopics } from '../lib/api.js'
 import { useAsync } from '../lib/useAsync.js'
 import { LEVEL_LABEL } from '../lib/olympiadLevels.js'
 import { Icon, Link, navigate } from '../components/ui.jsx'
@@ -655,63 +655,6 @@ function Assistant() {
   )
 }
 
-/* ——— Тарифы ——— */
-
-function Pricing({ plans }) {
-  return (
-    <section id="pricing" className="scroll-mt-24 border-b border-line bg-white">
-      <div className="container-x py-16 lg:py-24">
-        <Reveal className="mx-auto max-w-2xl text-center">
-          <p className="eyebrow mb-3">тарифы</p>
-          <h2 className="font-serif text-[30px] font-semibold leading-tight sm:text-[38px]">
-            Сориентироваться — бесплатно
-          </h2>
-          <p className="mt-4 text-[17px] leading-relaxed text-ink-500">
-            База олимпиад и вузов открыта всегда: понять свой маршрут можно, ничего не оплачивая.
-          </p>
-        </Reveal>
-
-        <Stagger className="mx-auto mt-12 grid max-w-4xl gap-5 md:grid-cols-2" step={0.12}>
-          {plans.map((plan) => (
-            <motion.article
-              key={plan.id}
-              variants={staggerItem}
-              whileHover={{ y: -4 }}
-              className={`relative flex flex-col rounded-lg border bg-white p-7 ${
-                plan.accent ? 'border-pen-700' : 'border-line'
-              }`}
-            >
-              {plan.accent && (
-                <span className="chip absolute -top-2.5 left-6 bg-pen-700 text-white">популярный</span>
-              )}
-              <h3 className="text-[18px] font-bold">{plan.title}</h3>
-              <p className="mt-4 flex items-baseline gap-2">
-                <span className="font-mono text-[34px] font-semibold leading-none tabular-nums">{plan.price_display}</span>
-                <span className="text-[15px] text-ink-400">{plan.period}</span>
-              </p>
-              <p className="mt-4 text-[15px] leading-relaxed text-ink-500">{plan.summary}</p>
-              <ul className="mt-6 flex-1 space-y-3">
-                {plan.features.map((f) => (
-                  <li key={f} className="flex gap-3 text-[15px] leading-relaxed text-ink-700">
-                    <Icon name="check" className="mt-0.5 h-[18px] w-[18px] shrink-0 text-pen-600" strokeWidth={2.2} />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <button
-                className={`mt-8 w-full ${plan.accent ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => navigate(plan.accent ? '/login' : '/program')}
-              >
-                {plan.cta}
-              </button>
-            </motion.article>
-          ))}
-        </Stagger>
-      </div>
-    </section>
-  )
-}
-
 /* ——— Финал ——— */
 
 function FinalCta({ sections }) {
@@ -747,10 +690,10 @@ function FinalCta({ sections }) {
 
 export default function Landing() {
   const { data, loading } = useAsync(
-    () => Promise.all([listTopics(), getBvi(), listPlans(), listSections()]),
+    () => Promise.all([listTopics(), getBvi(), listSections()]),
     []
   )
-  const [topics, bvi, plans, sections] = data || [[], { olympiads: [], universities: [] }, [], []]
+  const [topics, bvi, sections] = data || [[], { olympiads: [], universities: [] }, []]
   const { olympiads, universities } = bvi
 
   const stats = [
@@ -768,7 +711,6 @@ export default function Landing() {
       <Audience />
       {!loading && <Bases olympiads={olympiads} universities={universities} />}
       <Assistant />
-      {!loading && plans.length > 0 && <Pricing plans={plans} />}
       {!loading && <FinalCta sections={sections} />}
     </>
   )

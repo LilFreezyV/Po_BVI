@@ -33,18 +33,16 @@ function TaskCard({ task, index, status, onStatus }) {
               {task.hint || 'Подсказка появится в следующих обновлениях.'}
             </div>
           )}
-          {!task.locked && (
-            <div className="mt-3 border-t border-line/70 pt-3">
-              <AttemptButtons status={status} onChange={(s) => onStatus(task.id, s)} />
-            </div>
-          )}
+          <div className="mt-3 border-t border-line/70 pt-3">
+            <AttemptButtons status={status} onChange={(s) => onStatus(task.id, s)} />
+          </div>
         </div>
       </div>
     </li>
   )
 }
 
-function LevelBlock({ level, tasks, locked, statusOf, onStatus }) {
+function LevelBlock({ level, tasks, statusOf, onStatus }) {
   return (
     <section className="card overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
@@ -55,30 +53,11 @@ function LevelBlock({ level, tasks, locked, statusOf, onStatus }) {
         <span className="text-[13px] text-ink-400">{tasks.length} задачи</span>
       </div>
 
-      <div className="relative">
-        <ul className={`space-y-3 p-4 sm:p-5 ${locked ? 'pointer-events-none select-none blur-[5px]' : ''}`}>
-          {tasks.map((task, i) => (
-            <TaskCard key={task.id} task={task} index={i + 1} status={statusOf(task)} onStatus={onStatus} />
-          ))}
-        </ul>
-
-        {locked && (
-          <div className="absolute inset-0 grid place-items-center bg-white/60 p-6">
-            <div className="max-w-sm text-center">
-              <span className="mx-auto grid h-11 w-11 place-items-center rounded-xl bg-pen-50 text-pen-700">
-                <Icon name="lock" />
-              </span>
-              <p className="mt-4 text-[16px] font-bold">Доступно по подписке</p>
-              <p className="mt-2 text-[14px] leading-relaxed text-ink-500">
-                Средний и сложный уровни, полные разборы и ИИ-помощник открываются в платном тарифе.
-              </p>
-              <button className="btn-primary mt-5" onClick={() => navigate('/#pricing')}>
-                Смотреть тарифы
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+      <ul className="space-y-3 p-4 sm:p-5">
+        {tasks.map((task, i) => (
+          <TaskCard key={task.id} task={task} index={i + 1} status={statusOf(task)} onStatus={onStatus} />
+        ))}
+      </ul>
     </section>
   )
 }
@@ -212,7 +191,6 @@ export default function TopicPage({ topicId }) {
               <Icon name="clock" className="h-3.5 w-3.5" />
               {topic.minutes} мин
             </Chip>
-            {topic.free && <Chip className="bg-pen-50 text-pen-700">Открытая тема</Chip>}
           </div>
 
           <h1 className="mt-4 font-serif text-[32px] font-semibold leading-tight sm:text-[40px]">
@@ -243,7 +221,6 @@ export default function TopicPage({ topicId }) {
                   key={level.id}
                   level={level}
                   tasks={topic.tasks[level.id]}
-                  locked={topic.locked && level.id !== 'easy'}
                   statusOf={statusOf}
                   onStatus={onStatus}
                 />
