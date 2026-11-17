@@ -61,7 +61,9 @@ export default function App() {
   if (collection) {
     page = (
       <Suspense fallback={<p className="container-x py-8" role="status">Загружаем сборники…</p>}>
-        <Collections key={path} path={path} bookSlug={collection[1]} chapterNumber={Number(collection[2] || 0)} anchor={query.get('at')} />
+        <Collections key={path + (query.get('subject') === 'math' ? ':math' : '')}
+          path={path} bookSlug={collection[1]} chapterNumber={Number(collection[2] || 0)}
+          anchor={query.get('at')} requestedSubject={query.get('subject')} />
       </Suspense>
     )
   } else if (path.startsWith('/theory/')) {

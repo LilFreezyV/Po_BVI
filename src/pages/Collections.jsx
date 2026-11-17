@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import 'katex/dist/katex.min.css'
 import './collections.css'
 import { Link, PageHeader, navigate } from '../components/ui.jsx'
@@ -6,6 +6,8 @@ import { getCollectionAsset, getCollectionChapter, listCollectionBooks, searchCo
 import { useAuth } from '../lib/auth.jsx'
 import { expandTaskLabels, formatCollectionText, searchSnippet } from '../lib/collectionMath.js'
 import { useAsync } from '../lib/useAsync.js'
+
+const CollectionPdf = lazy(() => import('./CollectionPdf.jsx'))
 
 function chapterPath(book, number, anchor) {
   return `/collections/${book}/${number}${anchor ? '?at=' + encodeURIComponent(anchor) : ''}`
@@ -20,13 +22,13 @@ function SearchExcerpt({ text }) {
   return <p className="collection-excerpt mt-1 text-sm text-ink-500" ref={excerpt} />
 }
 
-function TaskSearch({ books, book, token }) {
+function TaskSearch({ books, book, subject, token }) {
   const [input, setInput] = useState('')
   const [query, setQuery] = useState('')
   const [offset, setOffset] = useState(0)
   const { data, error, loading } = useAsync(
-    () => query ? searchCollectionTasks(query, book, offset, token) : Promise.resolve(null),
-    [query, book, offset, token],
+    () => query ? searchCollectionTasks(query, book, offset, subject, token) : Promise.resolve(null),
+    [query, book, offset, subject, token],
   )
   return (
     <div className="mb-8">
@@ -38,7 +40,8 @@ function TaskSearch({ books, book, token }) {
         <input
           type="search" maxLength={160} value={input}
           className="collection-control min-w-0 flex-1 px-3 py-2"
-          placeholder="Номер или слова из условия" aria-label="Поиск задачи"
+          placeholder={subject === 'math' ? 'Номер страницы, задачи или слова из текста' : 'Номер или слова из условия'}
+          aria-label="Поиск по сборникам"
           onChange={(event) => {
             setInput(event.target.value)
             if (!event.target.value) {
@@ -56,7 +59,7 @@ function TaskSearch({ books, book, token }) {
               {data.items.map((item) => (
                 <li key={`${item.book}/${item.chapter}/${item.anchor}`}>
                   <Link to={chapterPath(item.book, item.chapter, item.anchor)} className="block py-3 hover:text-pen-700">
-                    <strong>Задача {item.number} · {books.find((entry) => entry.slug === item.book)?.title}</strong>
+                    <strong>{subject === 'math' ? 'Страница' : 'Задача'} {item.number} · {books.find((entry) => entry.slug === item.book)?.title}</strong>
                     <SearchExcerpt text={item.excerpt} />
                   </Link>
                 </li>
@@ -67,16 +70,37 @@ function TaskSearch({ books, book, token }) {
               {data.has_more && <button className="btn-secondary" onClick={() => setOffset(offset + 40)}>Дальше</button>}
             </div>
           </>
-        ) : <p>Задачи не найдены.</p>}
+        ) : <p>{subject === 'math' ? 'Совпадений не найдено.' : 'Задачи не найдены.'}</p>}
       </div>}
     </div>
   )
 }
 
 function Contents({ book }) {
+  const groups = new Map()
+  for (const chapter of book.chapters) {
+    if (!groups.has(chapter.group)) groups.set(chapter.group, [])
+    groups.get(chapter.group).push(chapter)
+  }
+  if (groups.size === 1 && groups.has(undefined)) return <ContentsList book={book} chapters={book.chapters} />
+  return (
+    <div className="space-y-3">
+      {[...groups].map(([year, chapters], index) => (
+        <details key={year || index} open={index === 0} className="card px-4 py-3">
+          <summary className="cursor-pointer font-semibold text-pen-700">
+            {year || 'Оглавление'} <span className="ml-2 font-mono text-sm font-normal text-ink-500">{chapters.length}</span>
+          </summary>
+          <div className="mt-3"><ContentsList book={book} chapters={chapters} /></div>
+        </details>
+      ))}
+    </div>
+  )
+}
+
+function ContentsList({ book, chapters }) {
   return (
     <ol className="divide-y divide-line border-y border-line">
-      {book.chapters.map(({ number, title, sections }) => (
+      {chapters.map(({ number, title, sections }) => (
         <li key={number} className="py-4">
           <Link className="font-semibold text-pen-700 hover:underline" to={chapterPath(book.slug, number)}>{title}</Link>
           {sections.length > 0 && <ul className="mt-2 space-y-2 pl-4 text-sm">
@@ -219,12 +243,10 @@ function ChapterBody({ html, anchor, path, token, chapterControl }) {
 function Chapter({ book, number, anchor, path, token }) {
   const chapter = book.chapters.find((entry) => entry.number === number)
   const { data, error, loading } = useAsync(
-    () => chapter ? getCollectionChapter(book.slug, number, token) : Promise.resolve(null),
+    () => chapter && !chapter.pdf ? getCollectionChapter(book.slug, number, token) : Promise.resolve(null),
     [book.slug, number, token],
   )
   if (!chapter) return <p>Глава не найдена.</p>
-  if (loading) return <p role="status">Загружаем главу…</p>
-  if (error) return <p role="alert">{error.message}</p>
   const chapterControl = (
     <label className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-ink-700">
       Глава
@@ -234,37 +256,53 @@ function Chapter({ book, number, anchor, path, token }) {
       </select>
     </label>
   )
+  if (chapter.pdf) return (
+    <Suspense fallback={<p role="status">Загружаем просмотрщик…</p>}>
+      <CollectionPdf chapter={chapter} chapterControl={chapterControl} anchor={anchor} path={path} token={token} />
+    </Suspense>
+  )
+  if (loading) return <p role="status">Загружаем главу…</p>
+  if (error) return <p role="alert">{error.message}</p>
   return <ChapterBody html={data.html} anchor={anchor} path={path} token={token} chapterControl={chapterControl} />
 }
 
-export default function Collections({ path, bookSlug, chapterNumber, anchor }) {
+export default function Collections({ path, bookSlug, chapterNumber, anchor, requestedSubject }) {
   const { token, user, authLoading } = useAuth()
+  const subject = bookSlug ? (bookSlug.startsWith('math-') ? 'math' : 'physics') :
+    (requestedSubject === 'math' ? 'math' : 'physics')
   const { data: books, error, loading } = useAsync(
-    () => user ? listCollectionBooks(token) : Promise.resolve(null), [user, token],
+    () => user ? listCollectionBooks(subject, token) : Promise.resolve(null), [subject, user, token],
   )
   const book = books?.find((entry) => entry.slug === bookSlug)
-  const next = anchor ? `${path}?at=${encodeURIComponent(anchor)}` : path
+  const catalog = subject === 'math' ? '/collections?subject=math' : '/collections'
+  const next = anchor ? `${path}?at=${encodeURIComponent(anchor)}` : (bookSlug ? path : catalog)
   useEffect(() => {
-    if (!chapterNumber) return undefined
+    if (!chapterNumber || subject === 'math') return undefined
     document.body.classList.add('printing-collection')
     return () => document.body.classList.remove('printing-collection')
-  }, [chapterNumber])
+  }, [chapterNumber, subject])
   return (
     <>
       <div className="container-x min-w-0 pt-8 sm:pt-12">
-        <PageHeader title={book?.title || 'Сборники по физике'}
+        <PageHeader title={book?.title || (subject === 'math' ? 'Сборники по математике' : 'Сборники по физике')}
           text={expandTaskLabels(book?.intro || book?.description || 'Задачники с оглавлениями, рисунками и разборами.')} />
       </div>
       <section className="collection-page container-x min-w-0 pb-12 pt-6 sm:pt-8">
+        {!bookSlug && <nav aria-label="Предмет сборников" className="mb-6 flex flex-wrap gap-2">
+          <Link className={subject === 'physics' ? 'btn-primary' : 'btn-secondary'} to="/collections"
+            aria-current={subject === 'physics' ? 'page' : undefined}>Физика</Link>
+          <Link className={subject === 'math' ? 'btn-primary' : 'btn-secondary'} to="/collections?subject=math"
+            aria-current={subject === 'math' ? 'page' : undefined}>Математика</Link>
+        </nav>}
         {authLoading ? <p>Проверяем вход…</p> : !user ? (
           <Link className="btn-primary" to={`/login?next=${encodeURIComponent(next)}`}>Войти, чтобы открыть сборники</Link>
         ) : loading ? <p>Загружаем сборники…</p> : error ? <p role="alert">{error.message}</p> : (
           <>
             {bookSlug && <div className="mb-5 flex flex-wrap gap-4 text-sm">
-              <Link className="text-pen-700 hover:underline" to="/collections">← Все сборники</Link>
+              <Link className="text-pen-700 hover:underline" to={catalog}>← Все сборники</Link>
               {book && chapterNumber > 0 && <Link className="text-pen-700 hover:underline" to={`/collections/${book.slug}`}>Оглавление</Link>}
             </div>}
-            <TaskSearch books={books || []} book={bookSlug} token={token} />
+            <TaskSearch key={subject} books={books || []} book={bookSlug} subject={subject} token={token} />
             {bookSlug ? !book ? <p>Сборник не найден.</p> : (
               <>
                 <p className="mb-4 text-sm leading-relaxed text-ink-500">
