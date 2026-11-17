@@ -9,7 +9,6 @@ const NAV = [
   { to: '/archive', label: 'Архив заданий' },
   { to: '/tiktok', label: 'Из тиктока' },
   { to: '/progress', label: 'Мой прогресс' },
-  { to: '/#pricing', label: 'Тарифы' },
 ]
 
 export default function Header({ route }) {
@@ -74,7 +73,7 @@ export default function Header({ route }) {
                 Войти
               </button>
               <button className="btn-primary px-4 py-2.5 text-sm" onClick={() => navigate('/catalog')}>
-                Попробовать бесплатно
+                Начать подготовку
               </button>
             </>
           )}
@@ -114,7 +113,7 @@ export default function Header({ route }) {
                   Войти
                 </button>
                 <button className="btn-primary mt-2 w-full" onClick={() => navigate('/catalog')}>
-                  Попробовать бесплатно
+                  Начать подготовку
                 </button>
               </>
             )}

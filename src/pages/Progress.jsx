@@ -28,13 +28,6 @@ function initials(name) {
   return letters.join('') || '?'
 }
 
-function planLabel(user) {
-  if (!user.subscription_active) return 'Бесплатный тариф'
-  if (!user.subscription_expires_at) return 'Подписка активна'
-  const date = new Date(user.subscription_expires_at).toLocaleDateString('ru-RU')
-  return `Подписка активна до ${date}`
-}
-
 function StatCard({ value, label, hint, accent = 'text-ink-900' }) {
   return (
     <div className="card p-5">
@@ -228,10 +221,6 @@ function CabinetContent({ user }) {
           <div>
             <p className="text-[13px] text-ink-400">Целевые олимпиады</p>
             <p className="mt-1 text-[15px] font-semibold">{user.target || 'не указаны'}</p>
-          </div>
-          <div>
-            <p className="text-[13px] text-ink-400">Тариф</p>
-            <p className="mt-1 text-[15px] font-semibold">{planLabel(user)}</p>
           </div>
         </div>
       </div>
