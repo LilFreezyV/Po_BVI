@@ -25,7 +25,6 @@ const COLUMNS = [
     title: 'Компания',
     links: [
       { label: 'О проекте', to: '/' },
-      { label: 'Тарифы', to: '/#pricing' },
       { label: 'Блог', to: '/' },
       { label: 'Поддержка', to: '/' },
     ],
