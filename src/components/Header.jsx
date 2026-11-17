@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth.jsx'
 const NAV = [
   { to: '/catalog', label: 'Темы' },
   { to: '/program', label: 'Задачи по темам' },
+  { to: '/collections', label: 'Сборники' },
   { to: '/bvi', label: 'БВИ и вузы' },
   { to: '/archive', label: 'Архив заданий' },
   { to: '/tiktok', label: 'Из тиктока' },
@@ -30,7 +31,7 @@ export default function Header({ route }) {
       ? route.startsWith('/catalog') || route.startsWith('/theory')
       : to === '/program'
         ? route.startsWith('/program') || route.startsWith('/topic')
-        : route === to
+        : route === to || route.startsWith(`${to}/`)
 
   return (
     <header
@@ -43,7 +44,7 @@ export default function Header({ route }) {
           <Logo />
         </Link>
 
-        <nav className="hidden items-center gap-1 lg:flex">
+        <nav className="hidden items-center gap-1 xl:flex">
           {NAV.map((item) => (
             <Link
               key={item.to}
@@ -57,7 +58,7 @@ export default function Header({ route }) {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-2 lg:flex">
+        <div className="hidden items-center gap-2 xl:flex">
           {user ? (
             <>
               <button className="btn-ghost px-3 py-2 text-sm" onClick={() => navigate('/progress')}>
@@ -80,7 +81,7 @@ export default function Header({ route }) {
         </div>
 
         <button
-          className="grid h-10 w-10 place-items-center rounded-lg border border-line text-ink-700 lg:hidden"
+          className="grid h-10 w-10 place-items-center rounded-lg border border-line text-ink-700 xl:hidden"
           onClick={() => setOpen((v) => !v)}
           aria-label={open ? 'Закрыть меню' : 'Открыть меню'}
           aria-expanded={open}
@@ -90,7 +91,7 @@ export default function Header({ route }) {
       </div>
 
       {open && (
-        <div className="border-t border-line bg-paper lg:hidden">
+        <div className="border-t border-line bg-paper xl:hidden">
           <div className="container-x flex flex-col gap-1 py-3">
             {NAV.map((item) => (
               <Link

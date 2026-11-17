@@ -1,0 +1,32 @@
+.collection-content {
+  max-width: 62rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.collection-content [id] { scroll-margin-top: 88px; }
+.collection-content :is(p, ul, ol, figure, table, blockquote) { margin-block: .75rem; }
+.collection-content :is(ul, ol) { padding-inline-start: 1.5rem; }
+.collection-content ul { list-style: disc; }
+.collection-content ol { list-style: decimal; }
+.collection-content :is(h2, h3, h4) { font: 600 1.45rem/1.28 Georgia, serif; margin-block: 1.25rem .5rem; }
+.collection-content :is(.problem, .k-box, .k-notes, .soldet) { padding: .85rem 1rem; border: 1px solid #e7e3dc; margin-block: 1rem; }
+.collection-content .problem { background: #fff; }
+.collection-content :is(.k-box, .k-notes, .soldet) { background: #eef1f7; }
+.collection-content :is(.pnum, .k-num, .k-hd, .lbl, summary) { font-weight: 700; }
+.collection-content :is(.ptag, .k-lvl) { margin-inline-start: .5rem; color: #5b6470; }
+.collection-content .sol { margin-top: .75rem; }
+.collection-content summary, .collection-content a { color: #1e2c4f; cursor: pointer; }
+.collection-content a { text-decoration: underline; }
+.collection-content img { max-width: 100%; height: auto; }
+.collection-content :is(.katex-display, pre) { overflow-x: auto; overflow-y: hidden; }
+.collection-content td, .collection-content th { border: 1px solid #e7e3dc; padding: .25rem .5rem; }
+.collection-content table { display: block; max-width: 100%; overflow-x: auto; }
+.collection-content .sd-dl { display: flex; flex-wrap: wrap; gap: .75rem; }
+
+@media print {
+  .printing-collection :is(header, footer, main > :not(.collection-page), .collection-page > :not(.collection-content)) {
+    display: none !important;
+  }
+  .collection-content { width: 100%; max-width: none; color: black; }
+}

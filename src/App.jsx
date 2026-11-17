@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { Suspense, lazy, useEffect, useState } from 'react'
 import Header from './components/Header.jsx'
 import Footer from './components/Footer.jsx'
 import Landing from './pages/Landing.jsx'
@@ -12,6 +12,7 @@ import Tiktok from './pages/Tiktok.jsx'
 import Login from './pages/Login.jsx'
 import Program from './pages/Program.jsx'
 import Conspect from './pages/Conspect.jsx'
+const Collections = lazy(() => import('./pages/Collections.jsx'))
 
 function Redirect({ to }) {
   useEffect(() => {
@@ -55,8 +56,15 @@ export default function App() {
     )
   }
 
+  const collection = path.match(/^\/collections(?:\/([a-z0-9-]+)(?:\/(\d+))?)?$/)
   let page
-  if (path.startsWith('/theory/')) {
+  if (collection) {
+    page = (
+      <Suspense fallback={<p className="container-x py-8" role="status">Загружаем сборники…</p>}>
+        <Collections key={path} path={path} bookSlug={collection[1]} chapterNumber={Number(collection[2] || 0)} anchor={query.get('at')} />
+      </Suspense>
+    )
+  } else if (path.startsWith('/theory/')) {
     page = <Theory lessonId={path.slice('/theory/'.length)} />
   } else if (path === '/tiktok') {
     page = <Tiktok />

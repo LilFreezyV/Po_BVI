@@ -100,6 +100,23 @@ export const listConspects = (subject = 'math') => request(`/conspects?subject=$
 export const getConspectHtml = (subject, number, token) =>
   request(`/conspects/${subject}/${number}`, { token, text: true })
 
+export const listCollectionBooks = (token) => request('/collections', { token })
+export const getCollectionChapter = (book, number, token) => request(`/collections/${book}/${number}`, { token })
+export const searchCollectionTasks = (query, book, offset, token) => {
+  const params = new URLSearchParams({ q: query, offset })
+  if (book) params.set('book', book)
+  return request(`/collections/search?${params}`, { token })
+}
+
+export async function getCollectionAsset(id, token, signal) {
+  const response = await fetch(`${API_URL}/collections/assets/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal,
+  })
+  if (!response.ok) throw new ApiError(response.status, 'Файл недоступен')
+  return response.blob()
+}
+
 /* ——— Авторизация ——— */
 
 export const register = (payload) => request('/auth/register', { method: 'POST', body: payload })
