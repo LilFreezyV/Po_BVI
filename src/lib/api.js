@@ -100,10 +100,10 @@ export const listConspects = (subject = 'math') => request(`/conspects?subject=$
 export const getConspectHtml = (subject, number, token) =>
   request(`/conspects/${subject}/${number}`, { token, text: true })
 
-export const listCollectionBooks = (token) => request('/collections', { token })
+export const listCollectionBooks = (subject, token) => request(`/collections?subject=${subject}`, { token })
 export const getCollectionChapter = (book, number, token) => request(`/collections/${book}/${number}`, { token })
-export const searchCollectionTasks = (query, book, offset, token) => {
-  const params = new URLSearchParams({ q: query, offset })
+export const searchCollectionTasks = (query, book, offset, subject, token) => {
+  const params = new URLSearchParams({ q: query, offset, subject })
   if (book) params.set('book', book)
   return request(`/collections/search?${params}`, { token })
 }

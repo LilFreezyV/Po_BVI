@@ -1,4 +1,4 @@
-"""Load a trusted physics snapshot into PostgreSQL after migration 0014."""
+"""Load a trusted snapshot for one subject into PostgreSQL after migration 0014."""
 
 import argparse
 import asyncio
@@ -8,9 +8,18 @@ import re
 from zipfile import ZipFile
 
 from sqlalchemy import delete, insert
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.database import async_session_factory, engine
-from app.models.collections import CollectionAsset, CollectionBook, CollectionChapter, CollectionTask
+from app.models.collections import CollectionAsset, CollectionBook, CollectionChapter, CollectionTask, collection_subject
+
+
+async def write_assets(session, rows):
+    statement = pg_insert(CollectionAsset)
+    await session.execute(statement.on_conflict_do_update(
+        index_elements=["id"],
+        set_={key: getattr(statement.excluded, key) for key in ("name", "mime", "data")},
+    ), rows)
 
 
 async def load(path, allow_missing):
@@ -23,17 +32,23 @@ async def load(path, allow_missing):
             if failures and not allow_missing:
                 raise ValueError(f"В архиве {len(failures)} недоступных файлов. См. --allow-missing.")
             books, chapters = snapshot["books"], snapshot["chapters"]
+            subject = snapshot.get("subject", "physics")
             tasks = [
                 {"book": chapter["book"], "chapter": chapter["number"], **task,
                  "number": re.sub(r"^(?:задача|зад\.?|№)\s*", "", task["number"], flags=re.IGNORECASE)}
                 for chapter in chapters for task in chapter["tasks"]
             ]
-            if len(books) != 7 or len(chapters) != 45 or len(tasks) != 2489:
+            if subject == "physics" and (len(books), len(chapters), len(tasks)) != (7, 45, 2489):
                 raise ValueError("Импорт остановлен: ожидалось 7 сборников, 45 глав и 2489 задач")
+            if subject not in {"physics", "math"} or not books or not chapters:
+                raise ValueError("Импорт остановлен: неизвестный предмет или пустой архив")
+            for book in books:
+                if book["slug"].startswith("math-") != (subject == "math"):
+                    raise ValueError(f"Код сборника не соответствует предмету: {book['slug']}")
+                book["subject"] = subject
             async with async_session_factory.begin() as session:
-                # CASCADE удаляет только главы и поисковый индекс предыдущего импорта.
-                await session.execute(delete(CollectionBook))
-                await session.execute(delete(CollectionAsset))
+                # Каскад удаляет главы и индекс только выбранного предмета.
+                await session.execute(delete(CollectionBook).where(collection_subject() == subject))
                 await session.execute(insert(CollectionBook), [
                     {"slug": book["slug"], "position": pos, "metadata_json": book}
                     for pos, book in enumerate(books)
@@ -49,10 +64,10 @@ async def load(path, allow_missing):
                     assets.append({"id": asset_id, "name": meta["name"], "mime": meta["mime"],
                                    "data": archive.read(f"assets/{asset_id}")})
                     if len(assets) == 64:
-                        await session.execute(insert(CollectionAsset), assets)
+                        await write_assets(session, assets)
                         assets.clear()
                 if assets:
-                    await session.execute(insert(CollectionAsset), assets)
+                    await write_assets(session, assets)
             print(f"Импортировано: {len(books)} сборников, {len(chapters)} глав, {len(tasks)} задач. "
                   f"Файлов недоступно: {len(failures)}.")
     finally:

@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, ForeignKeyConstraint, Integer, LargeBinary, String, Text
+from sqlalchemy import ForeignKey, ForeignKeyConstraint, Integer, LargeBinary, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -19,6 +19,11 @@ class CollectionChapter(Base):
     book: Mapped[str] = mapped_column(ForeignKey("collection_books.slug", ondelete="CASCADE"), primary_key=True)
     number: Mapped[int] = mapped_column(Integer, primary_key=True)
     html: Mapped[str] = mapped_column(Text)
+
+
+def collection_subject():
+    # Архив физики версии 1 уже загружен на проде, и в его метаданных предмета нет.
+    return func.coalesce(CollectionBook.metadata_json["subject"].astext, "physics")
 
 
 class CollectionTask(Base):
