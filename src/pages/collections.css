@@ -10,8 +10,12 @@
   outline-offset: 2px;
 }
 
+.collection-toolbar, .collection-content {
+  max-width: 54rem;
+  margin-inline: auto;
+}
+
 .collection-toolbar {
-  max-width: 62rem;
   padding-block: 12px;
   border-block: 1px solid #e7e3dc;
 }
@@ -39,7 +43,6 @@
 .collection-book:hover { border-color: #7f94be; }
 
 .collection-content {
-  max-width: 54rem;
   min-width: 0;
   line-height: 1.75;
   overflow-wrap: anywhere;

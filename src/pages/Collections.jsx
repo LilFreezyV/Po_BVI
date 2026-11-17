@@ -129,13 +129,20 @@ function ChapterBody({ html, anchor, path, token, chapterControl }) {
     }, { rootMargin: '300px' })
     container.querySelectorAll('img[data-asset]').forEach((img) => observer.observe(img))
     container.querySelectorAll('a[data-asset]').forEach((link) => link.setAttribute('href', '#'))
+    container.querySelectorAll('a.pnum[href^="https://botay.pro/"]').forEach((link) => {
+      const task = link.closest('article[id]')
+      if (!task) return
+      link.href = `#${path}?at=${encodeURIComponent(task.id)}`
+      link.removeAttribute('target')
+      link.removeAttribute('rel')
+    })
     formatCollectionText(container)
     return () => {
       controller.abort()
       observer.disconnect()
       urls.forEach((url) => URL.revokeObjectURL(url))
     }
-  }, [html, token])
+  }, [html, path, token])
 
   useEffect(() => {
     if (!anchor) return
@@ -261,8 +268,7 @@ export default function Collections({ path, bookSlug, chapterNumber, anchor }) {
             {bookSlug ? !book ? <p>Сборник не найден.</p> : (
               <>
                 <p className="mb-4 text-sm leading-relaxed text-ink-500">
-                  {expandTaskLabels((book.stats?.length ? book.stats : [book.count]).join(' · '))} ·{' '}
-                  <a className="underline" href={book.source} target="_blank" rel="noreferrer">Источник</a>
+                  {expandTaskLabels((book.stats?.length ? book.stats : [book.count]).join(' · '))}
                 </p>
                 {chapterNumber ? <Chapter book={book} number={chapterNumber} anchor={anchor} path={path} token={token} /> : <Contents book={book} />}
               </>
