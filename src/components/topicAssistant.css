@@ -1,0 +1,22 @@
+.topic-assistant::backdrop {
+  background: rgb(12 21 39 / 36%);
+}
+
+html:has(.topic-assistant[open]) {
+  overflow: hidden;
+}
+
+.topic-assistant-form {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .topic-assistant[open] {
+    animation: topic-assistant-enter 160ms ease-out;
+  }
+}
+
+@keyframes topic-assistant-enter {
+  from { opacity: 0; transform: translateX(4px); }
+  to { opacity: 1; transform: translateX(0); }
+}
