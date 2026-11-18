@@ -98,7 +98,6 @@ jobs:
           curl -fsS -o /dev/null "http://$DEPLOY_HOST/api/conspects/physics/0"
 
       - name: Clean up old releases (keep last 5)
-        if: always()
         run: |
           ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" \
             "cd $REMOTE_PATH/releases && ls -t | tail -n +6 | xargs -r rm -rf"
