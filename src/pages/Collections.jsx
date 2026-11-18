@@ -7,6 +7,16 @@ import { useAuth } from '../lib/auth.jsx'
 import { expandTaskLabels, formatCollectionText, searchSnippet } from '../lib/collectionMath.js'
 import { useAsync } from '../lib/useAsync.js'
 
+const PHYSICS_BOOK_ORDER = new Map([
+  'kalda-kinematics',
+  'kalda-wave-optics',
+  'savchenko',
+  'kalda-thermodynamics',
+  'kalda-mechanics',
+  'trushnikov',
+  'kalda-circuits',
+].map((slug, index) => [slug, index]))
+
 function chapterPath(book, number, anchor) {
   return `/collections/${book}/${number}${anchor ? '?at=' + encodeURIComponent(anchor) : ''}`
 }
@@ -268,6 +278,12 @@ export default function Collections({ path, bookSlug, chapterNumber, anchor, req
     () => user ? listCollectionBooks(subject, token) : Promise.resolve(null), [subject, user, token],
   )
   const book = books?.find((entry) => entry.slug === bookSlug)
+  const catalogBooks = books && subject === 'physics' && !bookSlug
+    ? [...books].sort((first, second) => (
+      (PHYSICS_BOOK_ORDER.get(first.slug) ?? PHYSICS_BOOK_ORDER.size)
+      - (PHYSICS_BOOK_ORDER.get(second.slug) ?? PHYSICS_BOOK_ORDER.size)
+    ))
+    : books
   const catalog = subject === 'math' ? '/collections?subject=math' : '/collections'
   const next = anchor ? `${path}?at=${encodeURIComponent(anchor)}` : (bookSlug ? path : catalog)
   useEffect(() => {
@@ -304,9 +320,9 @@ export default function Collections({ path, bookSlug, chapterNumber, anchor, req
                 </p>
                 {chapterNumber ? <Chapter book={book} number={chapterNumber} anchor={anchor} path={path} token={token} /> : <Contents book={book} />}
               </>
-            ) : books?.length ? (
+            ) : catalogBooks?.length ? (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {books.map((entry) => (
+                {catalogBooks.map((entry) => (
                   <Link key={entry.slug} to={`/collections/${entry.slug}`} className="collection-book">
                     <p className="text-xs font-semibold text-pen-700">{entry.eyebrow}</p>
                     <h2 className="mt-2 font-serif text-2xl">{entry.title}</h2>
