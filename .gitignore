@@ -15,3 +15,4 @@ backend/*.egg-info
 # Собранные страницы больших конспектов (~0,8 МБ каждая) — собираются conspects/build.py
 conspects/dist/
 /collection-import/
+/public/olympiad-content/
