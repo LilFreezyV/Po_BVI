@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import 'katex/dist/katex.min.css'
 import './collections.css'
 import { Link, PageHeader, navigate } from '../components/ui.jsx'
@@ -6,8 +6,6 @@ import { getCollectionAsset, getCollectionChapter, listCollectionBooks, searchCo
 import { useAuth } from '../lib/auth.jsx'
 import { expandTaskLabels, formatCollectionText, searchSnippet } from '../lib/collectionMath.js'
 import { useAsync } from '../lib/useAsync.js'
-
-const CollectionPdf = lazy(() => import('./CollectionPdf.jsx'))
 
 function chapterPath(book, number, anchor) {
   return `/collections/${book}/${number}${anchor ? '?at=' + encodeURIComponent(anchor) : ''}`
@@ -53,13 +51,13 @@ function TaskSearch({ books, book, subject, token }) {
         <button className="btn-primary" type="submit">Найти</button>
       </form>
       {query && <div className="mt-4" aria-live="polite">
-        {loading ? <p>Ищем задачи…</p> : error ? <p>{error.message}</p> : data?.items.length ? (
+        {loading ? <p>Ищем по сборникам…</p> : error ? <p>{error.message}</p> : data?.items.length ? (
           <>
             <ul className="divide-y divide-line border-y border-line">
               {data.items.map((item) => (
                 <li key={`${item.book}/${item.chapter}/${item.anchor}`}>
                   <Link to={chapterPath(item.book, item.chapter, item.anchor)} className="block py-3 hover:text-pen-700">
-                    <strong>{subject === 'math' ? 'Страница' : 'Задача'} {item.number} · {books.find((entry) => entry.slug === item.book)?.title}</strong>
+                    <strong>{item.anchor.startsWith('page-') ? 'Страница' : 'Задача'} {item.number} · {books.find((entry) => entry.slug === item.book)?.title}</strong>
                     <SearchExcerpt text={item.excerpt} />
                   </Link>
                 </li>
@@ -256,11 +254,7 @@ function Chapter({ book, number, anchor, path, token }) {
       </select>
     </label>
   )
-  if (chapter.pdf) return (
-    <Suspense fallback={<p role="status">Загружаем просмотрщик…</p>}>
-      <CollectionPdf chapter={chapter} chapterControl={chapterControl} anchor={anchor} path={path} token={token} />
-    </Suspense>
-  )
+  if (chapter.pdf) return <p>Веб-версия сборника ещё не загружена.</p>
   if (loading) return <p role="status">Загружаем главу…</p>
   if (error) return <p role="alert">{error.message}</p>
   return <ChapterBody html={data.html} anchor={anchor} path={path} token={token} chapterControl={chapterControl} />
@@ -277,10 +271,10 @@ export default function Collections({ path, bookSlug, chapterNumber, anchor, req
   const catalog = subject === 'math' ? '/collections?subject=math' : '/collections'
   const next = anchor ? `${path}?at=${encodeURIComponent(anchor)}` : (bookSlug ? path : catalog)
   useEffect(() => {
-    if (!chapterNumber || subject === 'math') return undefined
+    if (!chapterNumber) return undefined
     document.body.classList.add('printing-collection')
     return () => document.body.classList.remove('printing-collection')
-  }, [chapterNumber, subject])
+  }, [chapterNumber])
   return (
     <>
       <div className="container-x min-w-0 pt-8 sm:pt-12">

@@ -1048,15 +1048,12 @@ sudo -u deploy bash -c 'cd /home/deploy/PO_BVI/backend && .venv/bin/python -m sc
 ## Сборники по математике
 
 В `#/collections?subject=math` отдельная вкладка для 9–11 классов. Книги и
-листки открываются после входа. Оглавление ведёт на страницы оригинальных PDF.
-PDF.js рисует формулы и чертежи без повторного набора. Поиск по текстовому
-слою ведёт на страницу PDF, где найдено совпадение. Решения остаются на тех
-страницах, где они находятся в издании.
-
-Vite выпускает модуль PDF.js `pdf.worker-*.js` с расширением `.js`.
-На VPS nginx отдаёт `.mjs` как `application/octet-stream`, поэтому браузер
-отклонял модуль и показывал «Не удалось открыть PDF». При проверке релиза
-сверяйте `Content-Type` файла просмотра: ожидается JavaScript MIME-тип.
+листки открываются после входа и используют тот же HTML-ридер, что физика.
+Текст берётся из текстового слоя, сложные формулы и чертежи сохраняются
+изображениями фрагментов. Страницы без текстового слоя показаны как сканы.
+Решения раскрываются под условием, когда издание однозначно размечает их
+вместе с задачей. Отдельные разделы с решениями сохраняют своё место.
+Оглавление и поиск ведут к HTML-якорям.
 
 Импорт содержит Канель-Белова и Ковальджи без блока задач 8 класса, Алфутову
 и Устинова, планиметрию и стереометрию Прасолова, школьный курс Карпова,
@@ -1067,21 +1064,21 @@ Vite выпускает модуль PDF.js `pdf.worker-*.js` с расшире�
 отдельного полного комплекта для 9–11 классов. Каталог Школково вернул 503.
 Эти три позиции пока не загружены.
 
-Архив `collection-import/math.zip` содержит 9 позиций каталога, 495 разделов
-и 391 уникальный PDF. На проде запустить Deploy, затем передать архив в
-`/home/deploy/math.zip` и выполнить:
+`collection-import/math.zip` содержит исходные PDF и служит входом для сборки.
+На проде запустить Deploy, передать `collection-import/math-web.zip` в
+`/home/deploy/math-web.zip` и выполнить:
 
 ```sh
-sudo -u deploy bash -c 'cd /home/deploy/PO_BVI/backend && .venv/bin/python -m scripts.load_collections /home/deploy/math.zip'
+sudo -u deploy bash -c 'cd /home/deploy/PO_BVI/backend && .venv/bin/python -m scripts.load_collections /home/deploy/math-web.zip'
 ```
 
-Загрузчик заменяет сборники только того предмета, который записан в манифесте.
-Старый архив физики без поля `subject` считается физикой. Используется схема
-`0014`. Список недоступных исходных PDF хранится в `unavailable_sources` внутри
-манифеста. Для повторной сборки архива нужны `lxml`, `pypdf` и `pypdfium2`:
+Импорт меняет только математику. Схема `0014` не меняется. Для пересборки
+нужны `lxml`, `pypdf`, `pypdfium2`, `pymupdf>=1.26.7,<2` и `Pillow`. Git
+не хранит архивы, исходники и сгенерированные изображения.
 
 ```sh
 python backend/scripts/snapshot_math_collections.py collection-import/math.zip --sources collection-import/math-sources --first-year 2026
+python backend/scripts/render_math_collections.py collection-import/math.zip collection-import/math-web.zip
 ```
 
 ## Что делаем следующим
