@@ -42,6 +42,9 @@ async def load(path, allow_missing):
                 raise ValueError("Импорт остановлен: ожидалось 7 сборников, 45 глав и 2489 задач")
             if subject not in {"physics", "math"} or not books or not chapters:
                 raise ValueError("Импорт остановлен: неизвестный предмет или пустой архив")
+            if subject == "math" and (any(not chapter["html"].strip() for chapter in chapters)
+                                      or any("pdf" in entry for book in books for entry in book["chapters"])):
+                raise ValueError("Для импорта математики нужен готовый HTML-архив math-web.zip")
             for book in books:
                 if book["slug"].startswith("math-") != (subject == "math"):
                     raise ValueError(f"Код сборника не соответствует предмету: {book['slug']}")

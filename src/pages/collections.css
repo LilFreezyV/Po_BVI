@@ -83,9 +83,11 @@
 .collection-content table { display: block; max-width: 100%; overflow-x: auto; }
 .collection-content .sd-dl { display: flex; flex-wrap: wrap; gap: .75rem; }
 
-.collection-pdf-reader { scroll-margin-top: 88px; }
-.collection-pdf-sheet { min-width: 0; background: #fff; outline: 1px solid #e7e3dc; }
-.collection-pdf-sheet canvas { width: 100%; height: auto; }
+.collection-content .math-page-anchor { display: block; }
+.collection-content .math-line { margin-block: .35rem; }
+.collection-content .math-line:has(.math-equation) { overflow-x: auto; }
+.collection-content .math-equation { display: block; max-width: none; }
+.collection-content :is(.math-figure, .math-scan) { display: block; margin-inline: auto; }
 
 @media print {
   .printing-collection :is(header, footer, main > :not(.collection-page), .collection-page > :not(.collection-content)) {
