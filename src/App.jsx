@@ -71,7 +71,7 @@ export default function App() {
   } else if (path === '/tiktok') {
     page = <Tiktok />
   } else if (path.startsWith('/topic/')) {
-    page = <TopicPage topicId={path.slice('/topic/'.length)} />
+    page = <TopicPage key={path} topicId={path.slice('/topic/'.length)} assistantTarget={query.get('assistant')} />
   } else if (path === '/catalog') {
     page = <Catalog />
   } else if (path === '/progress') {

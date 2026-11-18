@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react'
 import { LEVELS } from '../data/topics.js'
-import { AI_SUGGESTIONS, STATUS_META } from '../data/site.js'
+import { STATUS_META } from '../data/site.js'
 import { getTopic as fetchTopic, setTaskStatus } from '../lib/api.js'
 import AttemptButtons, { ATTEMPT_CARD } from '../components/AttemptButtons.jsx'
+import TopicAssistant from '../components/TopicAssistant.jsx'
 import { useAsync } from '../lib/useAsync.js'
 import { useAuth } from '../lib/auth.jsx'
 import { LEVEL_LABEL } from '../lib/olympiadLevels.js'
 import { Chip, Icon, Link, ProgressBar, Skeleton, SkeletonLines, navigate } from '../components/ui.jsx'
 
-function TaskCard({ task, index, status, onStatus }) {
+function TaskCard({ task, index, status, onStatus, assistantTo }) {
   const [open, setOpen] = useState(false)
   return (
     <li className={`rounded-xl border p-4 transition sm:p-5 ${ATTEMPT_CARD[status] || 'border-line bg-white'}`}>
@@ -33,8 +34,13 @@ function TaskCard({ task, index, status, onStatus }) {
               {task.hint || 'Подсказка появится в следующих обновлениях.'}
             </div>
           )}
-          <div className="mt-3 border-t border-line/70 pt-3">
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line/70 pt-3">
             <AttemptButtons status={status} onChange={(s) => onStatus(task.id, s)} />
+            {assistantTo && !task.locked && task.text && (
+              <Link to={assistantTo(task.id)} className="rounded text-sm font-semibold text-pen-700 hover:underline focus-visible:outline-pen-500">
+                Разобрать с помощником
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -42,7 +48,7 @@ function TaskCard({ task, index, status, onStatus }) {
   )
 }
 
-function LevelBlock({ level, tasks, statusOf, onStatus }) {
+function LevelBlock({ level, tasks, statusOf, onStatus, assistantTo }) {
   return (
     <section className="card overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
@@ -55,72 +61,15 @@ function LevelBlock({ level, tasks, statusOf, onStatus }) {
 
       <ul className="space-y-3 p-4 sm:p-5">
         {tasks.map((task, i) => (
-          <TaskCard key={task.id} task={task} index={i + 1} status={statusOf(task)} onStatus={onStatus} />
+          <TaskCard key={task.id} task={task} index={i + 1} status={statusOf(task)} onStatus={onStatus} assistantTo={assistantTo} />
         ))}
       </ul>
     </section>
   )
 }
 
-function Assistant({ topic }) {
-  const [messages, setMessages] = useState([
-    {
-      me: false,
-      text: `Готова помочь с темой «${topic.title}». Могу подобрать задачи нужного уровня или разобрать ваше решение по шагам.`,
-    },
-  ])
-
-  const ask = (text) => {
-    setMessages((prev) => [
-      ...prev,
-      { me: true, text },
-      {
-        me: false,
-        text: `Собрала ответ по теме «${topic.title}». В прототипе ответы заранее заготовлены: в рабочей версии помощник опирается на конспект темы и задачи прошлых лет.`,
-      },
-    ])
-  }
-
-  return (
-    <div className="card p-5">
-      <div className="flex items-center gap-2.5">
-        <span className="grid h-8 w-8 place-items-center rounded-lg bg-pen-700 text-white">
-          <Icon name="spark" className="h-4 w-4" />
-        </span>
-        <p className="text-[15px] font-bold">ИИ-помощник</p>
-      </div>
-
-      <div className="mt-4 max-h-64 space-y-2.5 overflow-y-auto pr-1">
-        {messages.map((m, i) => (
-          <div key={i} className={`flex ${m.me ? 'justify-end' : 'justify-start'}`}>
-            <p
-              className={`max-w-[90%] rounded-xl px-3.5 py-2.5 text-[14px] leading-relaxed ${
-                m.me ? 'bg-pen-700 text-white' : 'bg-paper text-ink-700'
-              }`}
-            >
-              {m.text}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        {AI_SUGGESTIONS.map((s) => (
-          <button
-            key={s}
-            onClick={() => ask(s)}
-            className="rounded-full border border-line bg-paper px-3 py-1.5 text-left text-[13px] font-medium text-ink-700 transition hover:border-pen-300 hover:text-pen-700"
-          >
-            {s}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-export default function TopicPage({ topicId }) {
-  const { token } = useAuth()
+export default function TopicPage({ topicId, assistantTarget }) {
+  const { token, user, authLoading } = useAuth()
   const { data: topic, loading, error } = useAsync(() => fetchTopic(topicId, token), [topicId, token])
   // Отметки и прогресс после нажатий — поверх загруженной темы, без перезагрузки страницы.
   const [statuses, setStatuses] = useState({})
@@ -170,6 +119,14 @@ export default function TopicPage({ topicId }) {
 
   const progress = progressOverride || topic.progress
   const meta = STATUS_META[progress.status]
+  const topicPath = `/topic/${topic.id}`
+  const assistantTask = assistantTarget
+    ? Object.values(topic.tasks).flat().find((task) => task.id === assistantTarget && !task.locked && task.text)
+    : undefined
+  const assistantTo = (target) => {
+    const path = `${topicPath}?assistant=${encodeURIComponent(target)}`
+    return user ? path : `/login?next=${encodeURIComponent(path)}`
+  }
 
   return (
     <div className="container-x py-8 lg:py-12">
@@ -223,6 +180,7 @@ export default function TopicPage({ topicId }) {
                   tasks={topic.tasks[level.id]}
                   statusOf={statusOf}
                   onStatus={onStatus}
+                  assistantTo={authLoading ? undefined : assistantTo}
                 />
               ))}
             </div>
@@ -295,9 +253,23 @@ export default function TopicPage({ topicId }) {
             </Link>
           </div>
 
-          <Assistant topic={topic} />
+          {!authLoading && (
+            <section className="card p-5" aria-labelledby="topic-assistant-launcher">
+              <h2 id="topic-assistant-launcher" className="font-sans text-base font-semibold tracking-normal">Помощник по задачам</h2>
+              <p className="mt-2 text-sm leading-relaxed text-ink-500">
+                {user ? 'Задайте вопрос по теме или откройте разбор из карточки задачи.' : 'Войдите, чтобы задать вопрос о ходе решения.'}
+              </p>
+              <Link to={assistantTo('topic')} className="btn-secondary mt-4 w-full">
+                {user ? 'Задать вопрос по теме' : 'Войти к помощнику'}
+              </Link>
+            </section>
+          )}
         </aside>
       </div>
+      {user && (
+        <TopicAssistant key={user.id} open={assistantTarget === 'topic' || Boolean(assistantTask)}
+          topicTitle={topic.title} task={assistantTask} onDismiss={() => window.location.replace(`#${topicPath}`)} />
+      )}
     </div>
   )
 }
