@@ -29,6 +29,15 @@ jobs:
       - name: Install frontend deps
         run: npm ci
 
+      - name: Download olympiad archive
+        run: |
+          archive="$RUNNER_TEMP/pobvi-olympiad-content-2026-11-18.tar.gz"
+          curl --fail --show-error --silent --location --retry 5 --output "$archive" \
+            "https://github.com/LilFreezyV/Po_BVI/releases/download/olympiad-content-2026-11-18/pobvi-olympiad-content-2026-11-18.tar.gz"
+          echo "2bb045093bb82902bdabe0bfd3af5c9b13a2f30550c27fe1c94e8816c42af6f7  $archive" | sha256sum --check
+          tar -xzf "$archive" -C public
+          test -s public/olympiad-content/index.json
+
       - name: Build frontend
         env:
           VITE_API_URL: ${{ vars.VITE_API_URL }}
@@ -47,7 +56,8 @@ jobs:
           TS=$(date +%Y%m%d%H%M%S)
           echo "ts=$TS" >> "$GITHUB_OUTPUT"
           ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p $REMOTE_PATH/releases/$TS"
-          rsync -az -e "ssh -i ~/.ssh/deploy_key" dist/ "$DEPLOY_USER@$DEPLOY_HOST:$REMOTE_PATH/releases/$TS/"
+          rsync -az --link-dest="$REMOTE_PATH/current" -e "ssh -i ~/.ssh/deploy_key" \
+            dist/ "$DEPLOY_USER@$DEPLOY_HOST:$REMOTE_PATH/releases/$TS/"
 
       - name: Switch current symlink
         run: |
@@ -88,6 +98,11 @@ jobs:
           sleep 3
           curl -sf "http://$DEPLOY_HOST/api/subjects" > /dev/null && echo "Деплой ОК" || (echo "Бэкенд не отвечает после деплоя!" && exit 1)
           curl -sf -o /dev/null "http://$DEPLOY_HOST/" && echo "Фронтенд ОК" || (echo "Фронтенд не отвечает после деплоя!" && exit 1)
+
+      - name: Verify published olympiad archive
+        run: |
+          curl -fsS -o "$RUNNER_TEMP/published-archive-index.json" "http://$DEPLOY_HOST/olympiad-content/index.json"
+          cmp dist/olympiad-content/index.json "$RUNNER_TEMP/published-archive-index.json"
 
       - name: Verify published physics conspects
         if: inputs.load_physics_conspects

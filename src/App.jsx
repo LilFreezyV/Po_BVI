@@ -13,6 +13,7 @@ import Login from './pages/Login.jsx'
 import Program from './pages/Program.jsx'
 import Conspect from './pages/Conspect.jsx'
 const Collections = lazy(() => import('./pages/Collections.jsx'))
+const ArchiveSeason = lazy(() => import('./pages/ArchiveSeason.jsx'))
 
 function Redirect({ to }) {
   useEffect(() => {
@@ -83,6 +84,11 @@ export default function App() {
     page = <Bvi />
   } else if (path === '/archive') {
     page = <Archive />
+  } else if (path.startsWith('/archive/')) {
+    const [,, olympiad, slug, number, extra] = path.split('/')
+    page = <Suspense fallback={<p className="container-x py-10" role="status">Загрузка архива…</p>}>
+      <ArchiveSeason key={olympiad} olympiad={olympiad} slug={extra === undefined ? slug : 'invalid'} number={number} />
+    </Suspense>
   } else if (path === '/program') {
     page = <Program focusLesson={query.get('lesson')} />
   } else if (path === '/login') {
