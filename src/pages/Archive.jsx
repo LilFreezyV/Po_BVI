@@ -1,210 +1,128 @@
-import React, { useMemo, useState } from 'react'
-import { motion } from 'framer-motion'
+import React, { useState } from 'react'
+import { Icon, Link } from '../components/ui.jsx'
 import { getBvi } from '../lib/api.js'
 import { useAsync } from '../lib/useAsync.js'
-import { Chip, Icon, Link, PageHeader, SkeletonCards } from '../components/ui.jsx'
-import { Reveal, Stagger, staggerItem } from '../components/motion.jsx'
+import { LEVEL_LABEL } from '../lib/olympiadLevels.js'
+import { organizerArchive, seasons, seasonPath, taskCount } from '../data/archive/index.js'
+import { archiveSeasonPath, loadArchiveIndex } from '../data/archive/imported.js'
+import { ARCHIVE_LEVELS, ARCHIVE_STATUSES } from '../data/archive/levels.js'
+import cardMetadata from '../data/archive/cardMetadata.json'
+import './archive.css'
 
-/* Архив прошлых лет: куда идти за условиями и разборами каждой олимпиады.
-
-   Своих текстов заданий здесь нет и не будет без разрешения правообладателей — условия
-   олимпиад принадлежат их составителям. Поэтому страница устроена как указатель:
-   карточка олимпиады → официальный раздел с заданиями. Адреса собраны обходом сайтов,
-   см. ARCHIVES в backend/scripts/bvi_data.py. */
-
-const LEVEL_FILTERS = [
-  { id: 'all', label: 'Все' },
-  { id: 'I', label: 'I уровень' },
-  { id: 'II', label: 'II уровень' },
-  { id: 'III', label: 'III уровень' },
-  { id: 'off', label: 'Вне перечня' },
-]
-
-const LEVEL_LABEL = { I: 'I уровень', II: 'II уровень', III: 'III уровень', off: 'вне перечня' }
-
-const LEVEL_CHIP = {
-  I: 'bg-pen-700 text-white',
-  II: 'bg-pen-100 text-pen-700',
-  III: 'border border-line bg-paper text-ink-500',
-  off: 'border border-dashed border-line text-ink-400',
+const order = ['vsosh', 'mosh', 'rosatom', 'inzhenernaya', 'kurchatov', 'fizteh']
+const fizteh = {
+  id: 'fizteh',
+  ...cardMetadata.fizteh,
+  archive_url: organizerArchive,
 }
+const catalogIds = {
+  iosh: 'inzhenernaya', spbgu: 'spbgu-olymp', spb: 'spb-fizika',
+  shag: 'shag-v-buduschee', internet: 'internet-fizika', vedomstv: 'vedomstvennye',
+  nadezhda: 'nadezhda-energetiki', vsesib: 'vsesibirskaya',
+}
+const normalize = (text = '') => text.toLowerCase().replaceAll('ё', 'е')
+const filters = [['all', 'Все'], ['I', 'I уровень'], ['II', 'II уровень'], ['III', 'III уровень'], ['unranked', 'Без уровня']]
+const countFormat = new Intl.NumberFormat('ru-RU')
+const plural = new Intl.PluralRules('ru')
+const taskWord = { one: 'задача', few: 'задачи', many: 'задач', other: 'задач' }
 
-function ArchiveCard({ o }) {
-  const has = Boolean(o.archive_url)
-
-  return (
-    <motion.article
-      variants={staggerItem}
-      className={`card flex h-full flex-col p-5 ${has ? '' : 'border-dashed'}`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <h3 className="max-w-[24ch] text-[16px] font-bold leading-snug">{o.title}</h3>
-        <Chip className={`shrink-0 ${LEVEL_CHIP[o.level]}`}>{LEVEL_LABEL[o.level]}</Chip>
-      </div>
-
-      <p className="mt-2 text-[13px] leading-relaxed text-ink-400">
-        {o.organizer} · {o.grades}
-      </p>
-
-      <div className="mt-4 flex-1 border-t border-line pt-4">
-        {has ? (
-          <a
-            href={o.archive_url}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="group inline-flex items-start gap-2 text-[15px] font-semibold text-pen-700 hover:text-pen-900"
-          >
-            <Icon name="book" className="mt-0.5 h-4 w-4 shrink-0 text-ink-300" />
-            <span>
-              {o.archive_note}
-              <span className="mt-0.5 block font-mono text-[11px] font-normal text-ink-300">
-                {new URL(o.archive_url).hostname.replace(/^www\./, '')}
-              </span>
-            </span>
-          </a>
-        ) : (
-          <p className="text-[14px] leading-relaxed text-ink-400">
-            Отдельного раздела с заданиями на сайте нет — смотрите материалы на главной или
-            в канале олимпиады.
-          </p>
-        )}
-      </div>
-
-      <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 border-t border-line pt-3 text-[13px] font-semibold">
-        {o.site_url && (
-          <a
-            href={o.site_url}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="text-ink-500 hover:text-ink-900"
-          >
-            Сайт
-          </a>
-        )}
-        {o.chat_url && (
-          <a
-            href={o.chat_url}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="text-ink-400 hover:text-ink-900"
-          >
-            Канал
-          </a>
-        )}
-        <Link to="/bvi" className="ml-auto text-pen-700 hover:text-pen-900">
-          Что даёт диплом →
-        </Link>
-      </div>
-    </motion.article>
+function ArchiveCard({ item }) {
+  const hasYears = item.groupId || item.id === 'fizteh'
+  const years = item.years ?? seasons
+  const total = item.total ?? (item.id === 'fizteh' ? taskCount : null)
+  const archiveUrl = item.archive_url || item.site_url
+  const label = ARCHIVE_STATUSES[item.id] ?? item.status ?? 'Уровень не указан'
+  const showStatus = item.id === 'granit' || (!item.level && item.id !== 'vsosh')
+  const meta = [item.organizer, item.grades].filter(Boolean).join(' · ')
+  const archiveAction = (title, icon) => (
+    <>
+      <Icon name="book" className="olymp-card-book" />
+      <span className="olymp-archive-label">
+        {title}
+        {hasYears && total != null && <small>{countFormat.format(total)} {taskWord[plural.select(total)]}</small>}
+      </span>
+      {icon && <Icon name={icon} className="olymp-card-arrow" />}
+    </>
   )
+
+  return <article className="olymp-card" aria-label={item.title}>
+    <header className="olymp-card-head">
+      <div className="olymp-card-title">
+        <h3>{item.title}</h3>
+        {item.level && <span className="olymp-level">{LEVEL_LABEL[item.level]}</span>}
+      </div>
+      {showStatus && <p className="olymp-card-status">{label}</p>}
+      {meta && <p className="olymp-card-meta">{meta}</p>}
+    </header>
+    {hasYears ? <details className="olymp-card-archive">
+      <summary className="olymp-archive-action">{archiveAction('Задания по годам', 'chevronDown')}</summary>
+      <div className="olymp-years">
+        {years.map((season) => <Link key={season} to={item.groupId
+          ? archiveSeasonPath(item.groupId, season) : seasonPath(season)}>{season}</Link>)}
+      </div>
+    </details> : archiveUrl ? (
+      <a className="olymp-archive-action" href={archiveUrl} target="_blank" rel="noreferrer">
+        {archiveAction(item.archive_url ? 'Официальный архив' : 'К материалам олимпиады', 'arrow')}
+      </a>
+    ) : <div className="olymp-archive-action olymp-archive-unavailable">{archiveAction('Архив готовится')}</div>}
+    {(item.site_url || item.chat_url) && <footer className="olymp-card-links">
+      {item.site_url && <a href={item.site_url} target="_blank" rel="noreferrer">Сайт олимпиады</a>}
+      {item.chat_url && <a href={item.chat_url} target="_blank" rel="noreferrer">Канал</a>}
+    </footer>}
+  </article>
 }
 
 export default function Archive() {
+  const [search, setSearch] = useState('')
   const [level, setLevel] = useState('all')
-  const [query, setQuery] = useState('')
   const { data, loading, error } = useAsync(() => getBvi(), [])
+  const { data: archive, loading: archiveLoading, error: archiveError } = useAsync(loadArchiveIndex, [])
+  const query = normalize(search.trim())
+  const listed = data?.olympiads ?? []
+  const olympiads = listed.some((item) => item.id === fizteh.id) ? [...listed] : [...listed, fizteh]
+  for (const group of archive ?? []) {
+    const id = catalogIds[group.id] ?? group.id
+    const index = olympiads.findIndex((item) => item.id === id)
+    const years = [...new Set(group.variants.map((variant) => variant.season))]
+      .sort((a, b) => b.localeCompare(a, 'ru', { numeric: true }))
+    const imported = { groupId: group.id, years, total: group.variants.reduce((count, variant) => count + variant.tasks.length, 0) }
+    if (index < 0) olympiads.push({ id, title: group.title, ...cardMetadata[id], ...imported })
+    else olympiads[index] = { ...olympiads[index], ...imported }
+  }
+  const priority = (item) => {
+    const index = order.indexOf(item.id)
+    return index === -1 ? order.length : index
+  }
+  const filtered = olympiads
+    .map((item) => {
+      const archiveLevel = ARCHIVE_LEVELS[item.id] ?? item.level
+      return { ...item, level: ['I', 'II', 'III'].includes(archiveLevel) ? archiveLevel : null,
+        status: LEVEL_LABEL[archiveLevel] }
+    })
+    .sort((a, b) => priority(a) - priority(b))
+    .filter((item) => (level === 'all' || level === (item.level ?? 'unranked'))
+      && normalize([item.title, item.organizer, item.short].filter(Boolean).join(' ')).includes(query))
 
-  const olympiads = useMemo(() => {
-    if (!data) return []
-    const q = query.trim().toLowerCase()
-    return data.olympiads.filter(
-      (o) =>
-        (level === 'all' || o.level === level) &&
-        (!q || o.title.toLowerCase().includes(q) || o.organizer.toLowerCase().includes(q))
-    )
-  }, [data, level, query])
-
-  const withArchive = data ? data.olympiads.filter((o) => o.archive_url).length : 0
-
-  return (
-    <div className="container-x py-10 lg:py-14">
-      <PageHeader
-        eyebrow="Архив прошлых лет"
-        title="Где лежат задания и разборы каждой олимпиады"
-        text="Указатель на официальные архивы: условия, решения и критерии оценивания — на сайтах самих олимпиад. Так вы читаете первоисточник, а не чей-то пересказ."
-      >
-        {data && (
-          <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[12px] text-ink-400">
-            <span>
-              <span className="text-[15px] font-semibold text-ink-900">{data.olympiads.length}</span>{' '}
-              олимпиад
-            </span>
-            <span>
-              <span className="text-[15px] font-semibold text-ink-900">{withArchive}</span> с архивом
-              заданий
-            </span>
-            <span>ссылки проверены {new Date(data.updated_on).toLocaleDateString('ru-RU')}</span>
-          </div>
-        )}
-      </PageHeader>
-
-      <div className="sticky top-[68px] z-30 -mx-5 mt-8 border-b border-line bg-paper/90 px-5 py-4 backdrop-blur-md sm:-mx-8 sm:px-8">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap gap-2">
-            {LEVEL_FILTERS.map((f) => (
-              <button
-                key={f.id}
-                onClick={() => setLevel(f.id)}
-                className={`rounded-full px-3 py-1.5 text-[13px] font-semibold transition ${
-                  level === f.id
-                    ? 'bg-ink-900 text-white'
-                    : 'border border-line bg-white text-ink-500 hover:text-ink-900'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Поиск: Физтех, Курчатов…"
-            className="w-full rounded-xl border border-line bg-white px-4 py-2.5 text-[15px] outline-none transition placeholder:text-ink-300 focus:border-pen-400 sm:w-64"
-          />
-        </div>
+  return <div className="olymp-archive olymp-catalog">
+    <h1>Олимпиады по физике</h1>
+    <p className="olymp-lead">Задания по годам, этапам и классам. Уровни указаны по перечню на 2026/27 учебный год.</p>
+    <nav className="olymp-tabs" aria-label="Разделы заданий">
+      <Link to="/catalog">По темам</Link>
+      <Link to="/archive" aria-current="page">По олимпиадам</Link>
+    </nav>
+    <div className="olymp-catalog-tools">
+      <div className="olymp-catalog-filters" role="group" aria-label="Фильтр по уровню">
+        {filters.map(([id, label]) => <button key={id} type="button" aria-pressed={level === id}
+          onClick={() => setLevel(id)}>{label}</button>)}
       </div>
-
-      {loading && (
-        <div className="pt-10">
-          <SkeletonCards count={6} />
-        </div>
-      )}
-      {error && !loading && (
-        <p className="py-16 text-center text-ink-400">
-          Не удалось загрузить данные. Проверьте, что бэкенд запущен.
-        </p>
-      )}
-      {data && !loading && olympiads.length === 0 && (
-        <p className="py-16 text-center text-ink-400">Ничего не нашлось. Попробуйте другой запрос.</p>
-      )}
-
-      {data && !loading && olympiads.length > 0 && (
-        <>
-          <Stagger className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {olympiads.map((o) => (
-              <ArchiveCard key={o.id} o={o} />
-            ))}
-          </Stagger>
-
-          <Reveal className="mt-14 border-t border-line pt-8">
-            <p className="eyebrow mb-3">Почему так</p>
-            <p className="max-w-3xl text-[15px] leading-relaxed text-ink-500">
-              Условия олимпиадных заданий — авторский текст их составителей, поэтому мы не
-              выкладываем их у себя и не перепечатываем разборы. Зато у нас открыты задачи из
-              сборника Савченко — Балдина: он под свободной лицензией GNU FDL и разобран по
-              подтемам программы.
-            </p>
-            <Link
-              to="/program"
-              className="mt-4 inline-flex items-center gap-2 text-[15px] font-semibold text-pen-700 hover:text-pen-900"
-            >
-              Задачи сборника по темам программы
-              <Icon name="arrow" className="h-4 w-4" />
-            </Link>
-          </Reveal>
-        </>
-      )}
+      <input type="search" className="olymp-search" aria-label="Найти олимпиаду"
+        placeholder="Найти олимпиаду" value={search} onChange={(event) => setSearch(event.target.value)} />
     </div>
-  )
+    <div className="olymp-grid">
+      {filtered.map((item) => <ArchiveCard key={item.id} item={item} />)}
+    </div>
+    {(archiveLoading || (loading && !archive)) && <p role="status">Загружаем олимпиады…</p>}
+    {error && archiveError && <p role="status">Другие олимпиады сейчас недоступны.</p>}
+    {!archiveLoading && !loading && !filtered.length && <p role="status">Олимпиады не найдены.</p>}
+  </div>
 }

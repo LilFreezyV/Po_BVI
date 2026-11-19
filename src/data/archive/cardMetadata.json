@@ -1,0 +1,136 @@
+{
+  "vsosh": {
+    "title": "Всероссийская олимпиада школьников (ВсОШ)",
+    "organizer": "Минпросвещения России",
+    "grades": "7–11 класс",
+    "short": "ВсОШ",
+    "site_url": "https://vserosolimp.edsoo.ru/"
+  },
+  "inzhenernaya": {
+    "title": "Инженерная олимпиада школьников",
+    "organizer": "НИЯУ МИФИ, РУТ, НГТУ и др.",
+    "grades": "9–11 класс",
+    "short": "Инженерная",
+    "site_url": "https://olymp.mephi.ru/engineering",
+    "chat_url": "https://t.me/olymp_mephi"
+  },
+  "mosh": {
+    "title": "Московская олимпиада школьников",
+    "organizer": "Департамент образования Москвы",
+    "grades": "7–11 класс",
+    "short": "МОШ",
+    "site_url": "https://mosphys.olimpiada.ru/",
+    "chat_url": "https://t.me/mos_olymp"
+  },
+  "lomonosov": {
+    "title": "Олимпиада «Ломоносов»",
+    "organizer": "МГУ имени М. В. Ломоносова",
+    "grades": "7–11 класс",
+    "short": "«Ломоносов»",
+    "site_url": "https://olymp.msu.ru/",
+    "chat_url": "https://t.me/physics_msu_official"
+  },
+  "rosatom": {
+    "title": "Олимпиада «Росатом»",
+    "organizer": "НИЯУ МИФИ",
+    "grades": "7–11 класс",
+    "short": "«Росатом»",
+    "site_url": "https://olymp.mephi.ru/rosatom",
+    "chat_url": "https://t.me/olymp_mephi"
+  },
+  "fizteh": {
+    "title": "Олимпиада «Физтех»",
+    "organizer": "МФТИ",
+    "grades": "9–11 класс",
+    "short": "«Физтех»",
+    "site_url": "https://olymp-online.mipt.ru/",
+    "chat_url": "https://t.me/Olymp_Phystech"
+  },
+  "pvg": {
+    "title": "Покори Воробьёвы горы!",
+    "organizer": "МГУ и ИД «Московский комсомолец»",
+    "grades": "7–11 класс",
+    "short": "ПВГ",
+    "site_url": "https://pvg.mk.ru/",
+    "chat_url": "https://t.me/physics_msu_official"
+  },
+  "vsesibirskaya": {
+    "title": "Всесибирская открытая олимпиада",
+    "organizer": "НГУ",
+    "grades": "7–11 класс",
+    "short": "Всесибирская",
+    "site_url": "https://sesc.nsu.ru/olymp-vsesib/stages/",
+    "chat_url": "https://t.me/vsesib_olymp"
+  },
+  "internet-fizika": {
+    "title": "Интернет-олимпиада школьников по физике",
+    "organizer": "СПбГУ, ИТМО, ЮФУ",
+    "grades": "7–11 класс",
+    "short": "Интернет-олимпиада",
+    "site_url": "https://distolymp2.spbu.ru/olymp/",
+    "chat_url": "https://vk.com/distolymp"
+  },
+  "kurchatov": {
+    "title": "Олимпиада имени И. В. Курчатова",
+    "organizer": "НИЦ «Курчатовский институт», МФТИ, МИФИ, МИРЭА",
+    "grades": "7–11 класс",
+    "short": "Курчатов",
+    "site_url": "https://olimpiadakurchatov.ru/",
+    "chat_url": "https://t.me/olymp_mephi"
+  },
+  "spbgu-olymp": {
+    "title": "Олимпиада школьников СПбГУ",
+    "organizer": "СПбГУ",
+    "grades": "8–11 класс",
+    "short": "СПбГУ",
+    "site_url": "https://olympiada.spbu.ru/",
+    "chat_url": "https://max.ru/id7801002274_gos48"
+  },
+  "shag-v-buduschee": {
+    "title": "Шаг в будущее",
+    "organizer": "МГТУ имени Н. Э. Баумана",
+    "grades": "8–11 класс",
+    "short": "«Шаг в будущее»",
+    "site_url": "https://olymp.bmstu.ru/",
+    "chat_url": "https://t.me/olymp_bmstu"
+  },
+  "spb-fizika": {
+    "title": "Санкт-Петербургская олимпиада по физике",
+    "organizer": "СПбГЭТУ «ЛЭТИ», СПбГУ, Аничков дворец",
+    "grades": "7–11 класс",
+    "short": "СПб олимпиада по физике",
+    "site_url": "https://www.physolymp.spb.ru/"
+  },
+  "nadezhda-energetiki": {
+    "title": "Надежда энергетики",
+    "organizer": "НИУ «МЭИ»",
+    "grades": "7–11 класс",
+    "short": "«Надежда энергетики»",
+    "site_url": "https://www.energy-hope.ru/",
+    "chat_url": "https://t.me/energy_hope"
+  },
+  "gazprom": {
+    "title": "Отраслевая олимпиада «Газпром»",
+    "organizer": "РГУ нефти и газа и 13 вузов-партнёров",
+    "grades": "9–11 класс",
+    "short": "«Газпром»",
+    "site_url": "https://olympiad.gazprom.ru/",
+    "chat_url": "https://t.me/olymp_gazprom"
+  },
+  "belchonok": {
+    "title": "Университетская олимпиада «Бельчонок»",
+    "organizer": "Сибирский федеральный университет",
+    "grades": "7–11 класс",
+    "short": "«Бельчонок»",
+    "site_url": "https://dovuz.sfu.ru/abiturientu-sfu/olimpiady/belchonok/2026-2027-uchebnyy-god/",
+    "chat_url": "https://t.me/dovuz_sfu"
+  },
+  "vedomstvennye": {
+    "title": "Олимпиада на базе ведомственных вузов",
+    "organizer": "Академия ФСБ, Академия ФСО",
+    "grades": "8–11 класс",
+    "short": "Ведомственные вузы",
+    "site_url": "https://v-olymp.ru/volmp_physic/",
+    "chat_url": "https://t.me/volymp"
+  }
+}
