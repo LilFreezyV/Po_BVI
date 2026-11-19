@@ -94,23 +94,29 @@ jobs:
             "sudo systemctl restart bvi-backend && sudo systemctl reload nginx"
 
       - name: Health check
+        timeout-minutes: 3
         run: |
           sleep 3
-          curl -sf "http://$DEPLOY_HOST/api/subjects" > /dev/null && echo "Деплой ОК" || (echo "Бэкенд не отвечает после деплоя!" && exit 1)
-          curl -sf -o /dev/null "http://$DEPLOY_HOST/" && echo "Фронтенд ОК" || (echo "Фронтенд не отвечает после деплоя!" && exit 1)
+          curl_options=(--fail --silent --show-error --connect-timeout 10 --max-time 20 --retry 2 --retry-delay 2 --retry-all-errors)
+          curl "${curl_options[@]}" -o /dev/null "http://$DEPLOY_HOST/api/subjects" && echo "Деплой ОК" || (echo "Бэкенд не отвечает после деплоя!" && exit 1)
+          curl "${curl_options[@]}" -o /dev/null "http://$DEPLOY_HOST/" && echo "Фронтенд ОК" || (echo "Фронтенд не отвечает после деплоя!" && exit 1)
 
       - name: Verify published olympiad archive
-        run: |
-          curl -fsS -o "$RUNNER_TEMP/published-archive-index.json" "http://$DEPLOY_HOST/olympiad-content/index.json"
-          cmp dist/olympiad-content/index.json "$RUNNER_TEMP/published-archive-index.json"
+        timeout-minutes: 3
+        run: bash .github/scripts/verify-published-archive.sh
 
       - name: Verify published physics conspects
         if: inputs.load_physics_conspects
+        timeout-minutes: 3
         run: |
           set -o pipefail
-          curl -fsS "http://$DEPLOY_HOST/api/conspects?subject=physics" |
-            jq -e 'map(.number) | sort == [range(0; 15)]' > /dev/null
-          curl -fsS -o /dev/null "http://$DEPLOY_HOST/api/conspects/physics/0"
+          curl_options=(--fail --silent --show-error --connect-timeout 10 --max-time 20 --retry 2 --retry-delay 2 --retry-all-errors)
+          curl "${curl_options[@]}" --remove-on-error \
+            -o "$RUNNER_TEMP/published-physics-conspects.json" \
+            "http://$DEPLOY_HOST/api/conspects?subject=physics"
+          jq -e 'map(.number) | sort == [range(0; 15)]' \
+            "$RUNNER_TEMP/published-physics-conspects.json" > /dev/null
+          curl "${curl_options[@]}" -o /dev/null "http://$DEPLOY_HOST/api/conspects/physics/0"
 
       - name: Clean up old releases (keep last 5)
         run: |
