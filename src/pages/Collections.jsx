@@ -86,7 +86,7 @@ function TaskSearch({ books, book, subject, token }) {
 
 function Contents({ book }) {
   const groups = new Map()
-  for (const chapter of book.chapters) {
+  for (const chapter of contentsChapters(book)) {
     if (!groups.has(chapter.group)) groups.set(chapter.group, [])
     groups.get(chapter.group).push(chapter)
   }
@@ -105,6 +105,17 @@ function Contents({ book }) {
   )
 }
 
+function sameLesson(first, second) {
+  return first.group === second.group && first.title.trim().toLocaleLowerCase('ru') === second.title.trim().toLocaleLowerCase('ru')
+}
+
+function contentsChapters(book) {
+  if (!book.slug.startsWith('math-khamovniki-')) return book.chapters
+  return book.chapters.filter((chapter, index, chapters) => (
+    !chapter.duplicate_of && chapters.findIndex((other) => sameLesson(chapter, other)) === index
+  ))
+}
+
 function ContentsList({ book, chapters }) {
   return (
     <ol className="divide-y divide-line border-y border-line">
@@ -112,7 +123,9 @@ function ContentsList({ book, chapters }) {
         <li key={number} className="py-4">
           <Link className="font-semibold text-pen-700 hover:underline" to={chapterPath(book.slug, number)}>{title}</Link>
           {sections.length > 0 && <ul className="mt-2 space-y-2 pl-4 text-sm">
-            {sections.map((section) => (
+            {sections.filter((section) => (
+              !book.slug.startsWith('math-') || section.title.trim().toLocaleLowerCase('ru') !== title.trim().toLocaleLowerCase('ru')
+            )).map((section) => (
               <li key={section.anchor}>
                 <Link className="hover:underline" to={chapterPath(book.slug, number, section.anchor)}>{section.title}</Link>
               </li>
@@ -250,19 +263,36 @@ function ChapterBody({ html, anchor, path, token, chapterControl }) {
 
 function Chapter({ book, number, anchor, path, token }) {
   const chapter = book.chapters.find((entry) => entry.number === number)
+  const variants = chapter && book.slug.startsWith('math-khamovniki-')
+    ? book.chapters.filter((entry) => !entry.duplicate_of && sameLesson(entry, chapter))
+    : []
   const { data, error, loading } = useAsync(
     () => chapter && !chapter.pdf ? getCollectionChapter(book.slug, number, token) : Promise.resolve(null),
     [book.slug, number, token],
   )
   if (!chapter) return <p>Глава не найдена.</p>
   const chapterControl = (
-    <label className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-ink-700">
-      Глава
-      <select className="collection-control min-w-0 max-w-full px-3 py-2 text-ink-900"
-        value={number} onChange={(event) => navigate(chapterPath(book.slug, event.target.value))}>
-        {book.chapters.map((entry) => <option value={entry.number} key={entry.number}>{entry.title}</option>)}
-      </select>
-    </label>
+    <div className="flex min-w-0 flex-wrap items-end gap-4">
+      <label className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-ink-700">
+        {variants.length ? 'Тема' : 'Глава'}
+        <select className="collection-control min-w-0 max-w-full px-3 py-2 text-ink-900"
+          aria-label={variants.length ? 'Тема сборника' : 'Глава сборника'}
+          value={variants[0]?.number ?? number} onChange={(event) => navigate(chapterPath(book.slug, event.target.value))}>
+          {contentsChapters(book).map((entry) => <option value={entry.number} key={entry.number}>
+            {entry.group ? `${entry.group} · ` : ''}{entry.title}
+          </option>)}
+        </select>
+      </label>
+      {variants.length > 1 && <label className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-ink-700">
+        Группа
+        <select aria-label="Группа" className="collection-control min-w-0 max-w-full px-3 py-2 text-ink-900" value={chapter.duplicate_of ?? number}
+          onChange={(event) => navigate(chapterPath(book.slug, event.target.value))}>
+          {variants.map((entry, index) => <option key={entry.number} value={entry.number}>
+            {entry.variant?.replace(/^Групп[аы]\s+/i, '') || `Вариант ${index + 1}`}
+          </option>)}
+        </select>
+      </label>}
+    </div>
   )
   if (chapter.pdf) return <p>Веб-версия сборника ещё не загружена.</p>
   if (loading) return <p role="status">Загружаем главу…</p>

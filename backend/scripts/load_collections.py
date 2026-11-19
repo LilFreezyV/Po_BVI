@@ -45,6 +45,9 @@ async def load(path, allow_missing):
             if subject == "math" and (any(not chapter["html"].strip() for chapter in chapters)
                                       or any("pdf" in entry for book in books for entry in book["chapters"])):
                 raise ValueError("Для импорта математики нужен готовый HTML-архив math-web.zip")
+            if subject == "math" and (snapshot.get("format") != "native-math-v2"
+                                      or any(asset["mime"] != "image/svg+xml" for asset in snapshot["assets"].values())):
+                raise ValueError("Нужен новый архив math-web.zip с HTML/KaTeX и SVG-чертежами")
             for book in books:
                 if book["slug"].startswith("math-") != (subject == "math"):
                     raise ValueError(f"Код сборника не соответствует предмету: {book['slug']}")
