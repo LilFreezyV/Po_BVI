@@ -103,7 +103,53 @@ jobs:
 
       - name: Verify published olympiad archive
         timeout-minutes: 3
-        run: bash .github/scripts/verify-published-archive.sh
+        run: |
+          set -euo pipefail
+
+          : "${DEPLOY_HOST:?DEPLOY_HOST is required}"
+          : "${DEPLOY_USER:?DEPLOY_USER is required}"
+          : "${REMOTE_PATH:?REMOTE_PATH is required}"
+          : "${RUNNER_TEMP:?RUNNER_TEMP is required}"
+
+          expected="dist/olympiad-content/index.json"
+          published="$RUNNER_TEMP/published-archive-index.json"
+          test -s "$expected"
+
+          if curl --fail --silent --show-error --remove-on-error \
+            --connect-timeout 10 --max-time 30 \
+            --retry 2 --retry-delay 2 --retry-all-errors \
+            --output "$published" "http://$DEPLOY_HOST/olympiad-content/index.json"; then
+            if ! cmp -s "$expected" "$published"; then
+              echo "::error::Published archive index differs from the built release."
+              sha256sum "$expected" "$published"
+              exit 1
+            fi
+            echo "Published olympiad archive matches the built release."
+          else
+            status=$?
+            echo "::error::External archive check failed (curl exit $status). Checking the VPS over SSH."
+            echo "Expected archive index:"
+            sha256sum "$expected"
+            if ! ssh -i "$HOME/.ssh/deploy_key" \
+              -o BatchMode=yes -o ConnectTimeout=10 \
+              -o ServerAliveInterval=10 -o ServerAliveCountMax=2 \
+              "$DEPLOY_USER@$DEPLOY_HOST" bash -s -- "$REMOTE_PATH" "$DEPLOY_HOST" <<'REMOTE'
+          set -euo pipefail
+          index="$1/current/olympiad-content/index.json"
+          test -s "$index"
+          ls -lh "$index"
+          sha256sum "$index"
+          curl --fail --silent --show-error --connect-timeout 5 --max-time 15 \
+            --header "Host: $2" --output /dev/null \
+            --write-out 'VPS-local archive check: HTTP %{http_code}, %{time_total}s\n' \
+            http://127.0.0.1/olympiad-content/index.json
+          REMOTE
+            then
+              echo "::warning::VPS diagnostics also failed. Check SSH access, the published file and nginx logs."
+            fi
+            # Local availability alone does not prove that visitors can reach the archive.
+            exit "$status"
+          fi
 
       - name: Verify published physics conspects
         if: inputs.load_physics_conspects
