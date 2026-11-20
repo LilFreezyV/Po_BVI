@@ -88,7 +88,9 @@
 .collection-content h2 { font-size: 1.75rem; margin-block: 2rem 1rem; }
 .collection-content h3 { font-size: 1.375rem; margin-block: 1.5rem .75rem; }
 .collection-content :is(.math-problem, .soldet) > p:first-of-type { margin-top: 0; }
-.collection-content .math-overflow { display: inline-block; max-width: 100%; overflow-x: auto; vertical-align: middle; }
+.collection-content .math-overflow { display: inline-block; max-width: 100%; vertical-align: baseline; }
+.collection-content .math-overflow.is-wide { overflow: auto hidden; padding-block: .2em; }
+.collection-content .math-system { display: block; width: fit-content; margin-block: .75rem; }
 .collection-content math { font-size: 1em; }
 
 @media print {
