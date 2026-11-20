@@ -58,6 +58,29 @@ export function formatCollectionText(element) {
   renderMathInElement(element, collectionMathOptions())
 }
 
+// Measure the formula itself, rather than its ink overflow from tall glyphs.
+// Observing both boxes also covers narrow screens, font loading and opened solutions.
+export function fitCollectionFormulas(element) {
+  const boxes = [...element.querySelectorAll('.math-overflow')]
+    .filter((box) => box.firstElementChild)
+  function update(box) {
+    const width = box.getBoundingClientRect().width
+    const formulaWidth = box.firstElementChild.getBoundingClientRect().width
+    box.classList.toggle('is-wide', width > 0 && formulaWidth > width + 2)
+  }
+  const observer = new ResizeObserver((entries) => {
+    for (const { target } of entries) {
+      update(target.classList.contains('math-overflow') ? target : target.parentElement)
+    }
+  })
+  for (const box of boxes) {
+    update(box)
+    observer.observe(box)
+    observer.observe(box.firstElementChild)
+  }
+  return () => observer.disconnect()
+}
+
 export function searchSnippet(text) {
   if (text.length < 220) return text
   // Сервер присылает первые 220 символов. Убираем хвост, если он оборвался посреди формулы.

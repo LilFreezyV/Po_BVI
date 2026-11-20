@@ -4,7 +4,7 @@ import './collections.css'
 import { Link, PageHeader, navigate } from '../components/ui.jsx'
 import { getCollectionAsset, getCollectionChapter, listCollectionBooks, searchCollectionTasks } from '../lib/api.js'
 import { useAuth } from '../lib/auth.jsx'
-import { expandTaskLabels, formatCollectionText, searchSnippet } from '../lib/collectionMath.js'
+import { expandTaskLabels, fitCollectionFormulas, formatCollectionText, searchSnippet } from '../lib/collectionMath.js'
 import { useAsync } from '../lib/useAsync.js'
 
 const PHYSICS_BOOK_ORDER = new Map([
@@ -182,7 +182,9 @@ function ChapterBody({ html, anchor, path, token, chapterControl }) {
       link.removeAttribute('rel')
     })
     formatCollectionText(container)
+    const stopMeasuring = fitCollectionFormulas(container)
     return () => {
+      stopMeasuring()
       controller.abort()
       observer.disconnect()
       urls.forEach((url) => URL.revokeObjectURL(url))
