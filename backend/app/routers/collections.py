@@ -34,6 +34,8 @@ async def search_tasks(
 ):
     response.headers.update(PRIVATE)
     words = re.sub(r"^(?:задача\s+|зад\.?\s+|№\s*)", "", q.strip(), flags=re.IGNORECASE).split()
+    if subject == "math" and len(words) == 1 and re.fullmatch(r"\d+(?:\.\d+)*\*", words[0]):
+        words[0] = words[0][:-1]
     if not words:
         return {"items": [], "has_more": False}
     query = (select(CollectionTask)

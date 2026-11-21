@@ -142,6 +142,7 @@ function ChapterBody({ html, anchor, path, token, chapterControl }) {
   const downloads = useRef(null)
   const [message, setMessage] = useState('')
   const [printing, setPrinting] = useState(false)
+  const hasSolutions = /<details\b/i.test(html)
 
   useEffect(() => {
     const container = root.current
@@ -253,8 +254,10 @@ function ChapterBody({ html, anchor, path, token, chapterControl }) {
     <div className="collection-toolbar mb-6 flex flex-wrap items-end justify-between gap-4">
       {chapterControl}
       <div className="flex flex-wrap items-center gap-2">
-        <button className="collection-action" onClick={() => root.current.querySelectorAll('details').forEach((node) => { node.open = true })}>Раскрыть решения</button>
-        <button className="collection-action" onClick={() => root.current.querySelectorAll('details').forEach((node) => { node.open = false })}>Свернуть</button>
+        {hasSolutions && <>
+          <button className="collection-action" onClick={() => root.current.querySelectorAll('details').forEach((node) => { node.open = true })}>Раскрыть решения</button>
+          <button className="collection-action" onClick={() => root.current.querySelectorAll('details').forEach((node) => { node.open = false })}>Свернуть</button>
+        </>}
         <button className="collection-action" onClick={printChapter} disabled={printing}>{printing ? 'Загружаем рисунки…' : 'Печать'}</button>
       </div>
       {message && <p role="status">{message}</p>}
