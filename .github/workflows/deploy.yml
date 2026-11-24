@@ -50,6 +50,37 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
 
+      - name: Free disk space before upload
+        run: |
+          ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" bash -s -- "$REMOTE_PATH" <<'REMOTE'
+          set -euo pipefail
+          releases="$1/releases"
+          current=$(readlink -f -- "$1/current")
+          test -d "$releases"
+          test -d "$current"
+          [[ "$current" == "$releases/"* && "${current#"$releases/"}" != */* ]]
+          available=$(df -Pk "$releases" | awk 'NR == 2 {print $4}')
+          threshold=$((3 * 1024 * 1024))
+          echo "Available: ${available} KiB; minimum: ${threshold} KiB"
+          if (( available < threshold )); then
+            removed=0
+            for release in "$releases"/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]; do
+              [[ -d "$release" && ! -L "$release" ]] || continue
+              [[ "$release" != "$current" ]] || continue
+              echo "Removing old release: $release"
+              rm -rf -- "$release"
+              ((removed+=1))
+              (( removed < 2 )) || break
+            done
+            available=$(df -Pk "$releases" | awk 'NR == 2 {print $4}')
+            echo "Available after cleanup: ${available} KiB"
+            if (( available < threshold )); then
+              echo 'Not enough disk space after removing up to two old releases; stop deployment.' >&2
+              exit 1
+            fi
+          fi
+          REMOTE
+
       - name: Upload new release
         id: release
         run: |
