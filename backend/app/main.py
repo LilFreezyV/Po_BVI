@@ -5,7 +5,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from app.config import settings
 from app.routers import auth, bvi, collections, conspects, curriculum, internal, plans, progress, sections, subjects, topics
 
-app = FastAPI(title="Без Вступительных API", version="0.1.0")
+app = FastAPI(title="Олимпиадник API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,

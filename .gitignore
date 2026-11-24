@@ -16,3 +16,39 @@ backend/*.egg-info
 conspects/dist/
 /collection-import/
 /public/olympiad-content/
+
+# Локальное сравнение GigaChat: ключ, материалы и результаты тестирования
+/GigaTest/
+
+# Локальный граф проекта: индексы, кеш, окружение и визуализации
+/graphify-out/
+
+# Варианты локальных настроек; шаблоны разрешено коммитить
+.env.*
+!.env.example
+!.env.*.example
+
+# Python: окружения, байткод и кеши инструментов
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Локальный кеш Vite и диагностические логи npm
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Временные результаты проверки документов
+/outputs/.application-fields-qa/
+
+# Локальные документы проекта и настройки субагентов
+/outputs/
+/.codex/agents/

@@ -65,7 +65,7 @@ function Bar({ subject, number, title }) {
         className="inline-flex shrink-0 items-center gap-1.5 font-semibold text-pen-700 hover:text-pen-900"
       >
         <Icon name="chevron" className="h-4 w-4 rotate-180" />
-        <span className="hidden sm:inline">Без Вступительных · Темы</span>
+        <span className="hidden sm:inline">Олимпиадник · Темы</span>
         <span className="sm:hidden">На сайт</span>
       </Link>
       <span className="min-w-0 flex-1 truncate text-center font-mono text-[12px] text-ink-400">
@@ -122,7 +122,7 @@ export default function Conspect({ subject, number, section }) {
   }, [data, number])
 
   useEffect(() => {
-    if (title) document.title = `${title} — Без Вступительных`
+    if (title) document.title = `${title} — Олимпиадник`
   }, [title])
   useEffect(() => {
     const before = document.title

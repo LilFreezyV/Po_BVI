@@ -107,12 +107,12 @@ export function Logo({ compact = false }) {
   return (
     <span className="inline-flex items-center gap-2.5">
       <span className="relative grid h-9 w-9 place-items-center rounded-[10px] bg-pen-700 text-white">
-        <span className="text-[15px] font-extrabold leading-none tracking-tight">БВ</span>
+        <span className="text-[15px] font-extrabold leading-none tracking-tight">О</span>
         <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-paper bg-mark-400" />
       </span>
       {!compact && (
         <span className="flex flex-col leading-none">
-          <span className="text-[15px] font-extrabold tracking-tight">Без Вступительных</span>
+          <span className="text-[15px] font-extrabold tracking-tight">Олимпиадник</span>
           <span className="mt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-400">
             физика · математика
           </span>

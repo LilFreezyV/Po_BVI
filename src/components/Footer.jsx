@@ -63,7 +63,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-12 flex flex-col gap-3 border-t border-line pt-6 text-sm text-ink-400 sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2026 «Без Вступительных». Прототип интерфейса, данные демонстрационные.</p>
+          <p>© 2026 «Олимпиадник». Прототип интерфейса, данные демонстрационные.</p>
           <div className="flex gap-5">
             <Link to="/" className="transition hover:text-ink-700">
               Оферта
