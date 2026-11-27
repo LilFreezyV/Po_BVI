@@ -291,6 +291,13 @@ deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart bvi-backend, /usr/bin/sys
 Settings → Secrets and variables → Actions → **Secrets** → `DEPLOY_SSH_KEY_B64`. После этого
 локальные файлы ключа удалить.
 
+Отдельно закрепите публичный ключ **самого VPS** в `.github/ssh/deploy_known_hosts`.
+Deploy использует его для всех подключений к `DEPLOY_HOST` и останавливается при несовпадении.
+Для нового VPS или ротации получите тип и публичную часть ключа из доверенной консоли хостинга:
+`sudo awk '{print $1, $2}' /etc/ssh/ssh_host_ed25519_key.pub`. Сверьте отпечаток SHA-256
+командой `sudo ssh-keygen -E sha256 -lf /etc/ssh/ssh_host_ed25519_key.pub`. Затем обновите
+строку `<DEPLOY_HOST> ssh-ed25519 <публичный ключ>` и при смене адреса сам `DEPLOY_HOST`.
+
 **5. Ключ сервер → GitHub (для `git pull`).** Под `deploy` на сервере:
 
 ```

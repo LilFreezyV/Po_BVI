@@ -45,10 +45,25 @@ jobs:
 
       - name: Set up SSH
         run: |
-          mkdir -p ~/.ssh
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          known_hosts="$HOME/.ssh/deploy_known_hosts"
+          install -m 600 .github/ssh/deploy_known_hosts "$known_hosts"
+          if ! ssh-keygen -F "$DEPLOY_HOST" -f "$known_hosts" >/dev/null; then
+            echo "::error::No pinned SSH host key for $DEPLOY_HOST in .github/ssh/deploy_known_hosts"
+            exit 1
+          fi
+          cat > "$HOME/.ssh/config" <<EOF
+          Host $DEPLOY_HOST
+            HostKeyAlgorithms ssh-ed25519
+            StrictHostKeyChecking yes
+            UserKnownHostsFile "$known_hosts"
+            GlobalKnownHostsFile /dev/null
+            UpdateHostKeys no
+          EOF
+          chmod 600 "$HOME/.ssh/config"
           echo "${{ secrets.DEPLOY_SSH_KEY_B64 }}" | base64 -d > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
 
       - name: Free disk space before upload
         run: |
